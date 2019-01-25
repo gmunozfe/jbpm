@@ -43,7 +43,7 @@ public class EGetTaskTest extends RemoteEjbTest {
         long taskId = ejb.getTasksByProcessInstanceId(pid).get(0);
 
         UserTaskInstanceDesc task = ejb.getTaskById(taskId);
-        System.out.println(task.getActualOwner() + "," + task.getTaskId() + "," + task.getStatus());
+        System.out.println("@@Owner:" + task.getActualOwner() + "," + task.getTaskId() + "," + task.getStatus());
         Assertions.assertThat(userId).isEqualTo(task.getActualOwner());
         Assertions.assertThat(Status.Reserved.name()).isEqualTo(task.getStatus());
     }
