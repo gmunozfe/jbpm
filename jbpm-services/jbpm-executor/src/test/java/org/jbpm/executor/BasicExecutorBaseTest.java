@@ -457,11 +457,12 @@ public abstract class BasicExecutorBaseTest {
 
         List<RequestInfo> allRequests = executorService.getAllRequests(new QueryContext());
         assertEquals(1, allRequests.size());
+        
 
         // Future execution is planned to be started 2 minutes and 20 seconds after last fail.
         // Time difference vary because of test thread sleeping for 10 seconds.
         diff = allRequests.get(0).getTime().getTime() - Calendar.getInstance().getTimeInMillis();
-        assertTrue(diff < 140000);
+        assertTrue(diff <= 140000);
         assertTrue(diff > 130000);
 
         executorService.clearAllRequests();
@@ -631,16 +632,18 @@ public abstract class BasicExecutorBaseTest {
         CommandContext ctxCMD = new CommandContext();
         ctxCMD.setData("businessKey", "low priority");
         ctxCMD.setData("priority", -1);
+        ctxCMD.setData("delay", 10L);
         
         Date futureDate = new Date(System.currentTimeMillis() + EXTRA_TIME);
 
-        executorService.scheduleRequest("org.jbpm.executor.commands.PrintOutCommand", futureDate, ctxCMD);
+        executorService.scheduleRequest("org.jbpm.executor.commands.DelayedPrintOutCommand", futureDate, ctxCMD);
         
         CommandContext ctxCMD2 = new CommandContext();
         ctxCMD2.setData("businessKey", "high priority");
         ctxCMD2.setData("priority", 10);
+        ctxCMD2.setData("delay", 100L);
 
-        executorService.scheduleRequest("org.jbpm.executor.commands.PrintOutCommand", futureDate, ctxCMD2);
+        executorService.scheduleRequest("org.jbpm.executor.commands.DelayedPrintOutCommand", futureDate, ctxCMD2);
         
         countDownListener.waitTillCompleted();
 
