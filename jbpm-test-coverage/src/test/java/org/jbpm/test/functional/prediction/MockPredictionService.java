@@ -1,0 +1,61 @@
+/*
+ * Copyright 2019 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.jbpm.test.functional.prediction;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.kie.api.task.model.Task;
+import org.kie.internal.task.api.prediction.PredictionOutcome;
+import org.kie.internal.task.api.prediction.PredictionService;
+
+public class MockPredictionService implements PredictionService{
+
+    public static final String IDENTIFIER = "MockPredictionService";
+    public static final String PREDICTED_VALUE = "predictedValue";
+    public static final String UNCONFIDENT_VALUE = "unconfidentValue";
+
+    @Override
+    public String getIdentifier() {
+        return IDENTIFIER;
+    }
+
+    @Override
+    public PredictionOutcome predict(Task task, Map<String, Object> inputData) {
+        Map<String, Object> outData = new HashMap<String, Object>();
+        // for "Task 1 PS" returns a confident value, completing the task
+        // for "Task 2 PS", suggest a possible value but task is not completed
+        // Otherwise, it behaves like NoOpPredictionService
+        if ("Task 1 PS".equals(task.getName())){
+            outData.put("evalOut", PREDICTED_VALUE);
+            return new PredictionOutcome(90.0, 80.0, outData );
+        } else if ("Task 2 PS".equals(task.getName())){
+            outData.put("eval", UNCONFIDENT_VALUE);
+            return new PredictionOutcome(60.0, 80.0, outData );
+        } else
+            return new PredictionOutcome();
+            
+    }
+
+    @Override
+    public void train(Task task, Map<String, Object> inputData, Map<String, Object> outputData) {
+        // do nothing, no model to train
+    }
+
+}
+
+

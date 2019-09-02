@@ -160,6 +160,9 @@
           <configuration>
             <skip>${skipTests}</skip>
             <runOrder>alphabetical</runOrder>
+            <systemPropertyVariables>
+              <org.jbpm.task.prediction.service>MockPredictionService</org.jbpm.task.prediction.service>
+            </systemPropertyVariables>
           </configuration>
         </plugin>
       </plugins>
