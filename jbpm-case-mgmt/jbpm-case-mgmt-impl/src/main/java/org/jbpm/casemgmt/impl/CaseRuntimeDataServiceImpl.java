@@ -16,11 +16,6 @@
 
 package org.jbpm.casemgmt.impl;
 
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
-import static org.jbpm.kie.services.impl.CommonUtils.getAuthenticatedUserRoles;
-import static org.kie.internal.query.QueryParameterIdentifiers.FILTER;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -88,6 +83,11 @@ import org.kie.internal.KieInternalServices;
 import org.kie.internal.identity.IdentityProvider;
 import org.kie.internal.process.CorrelationKey;
 import org.kie.internal.process.CorrelationKeyFactory;
+
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
+import static org.jbpm.kie.services.impl.CommonUtils.getAuthenticatedUserRoles;
+import static org.kie.internal.query.QueryParameterIdentifiers.FILTER;
 
 
 public class CaseRuntimeDataServiceImpl implements CaseRuntimeDataService, DeploymentEventListener {
@@ -437,6 +437,17 @@ public class CaseRuntimeDataServiceImpl implements CaseRuntimeDataService, Deplo
         return processInstances;
     }
 
+    @Override
+    public Collection<CaseInstance> getSubCaseInstancesByParentCaseId(String parentCaseId, List<CaseStatus> statuses, QueryContext queryContext) {
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put("parentCaseId", parentCaseId + "%");
+        params.put("statuses", resolveCaseStatuses(statuses));
+        applyQueryContext(params, queryContext);
+        applyDeploymentFilter(params);
+        List<CaseInstance> processInstances = commandService.execute(new QueryNameCommand<List<CaseInstance>>("getSubCaseInstancesByParentCaseId", params));
+
+        return processInstances;
+    }
 
     @Override
     public Collection<CaseInstance> getCaseInstancesByDeployment(String deploymentId, List<CaseStatus> statuses, QueryContext queryContext) {

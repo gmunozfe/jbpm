@@ -16,13 +16,6 @@
 
 package org.jbpm.casemgmt.impl;
 
-import static java.util.stream.Collectors.toMap;
-import static org.assertj.core.api.Assertions.fail;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.jbpm.casemgmt.api.dynamic.TaskSpecification;
 import org.jbpm.casemgmt.api.model.CaseStatus;
@@ -46,6 +40,13 @@ import org.kie.api.task.model.TaskSummary;
 import org.kie.internal.query.QueryFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static java.util.stream.Collectors.toMap;
+import static org.assertj.core.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class SubCaseServiceImplTest extends AbstractCaseServicesBaseTest {
 
@@ -475,6 +476,54 @@ public class SubCaseServiceImplTest extends AbstractCaseServicesBaseTest {
             assertNotNull(mainCaseFile);
             assertEquals(HR_CASE_ID, mainCaseFile.getData("subCaseId"));
             assertEquals("John Doe", mainCaseFile.getData("outcome"));
+        } catch (Exception e) {
+            logger.error("Unexpected error {}", e.getMessage(), e);
+            fail("Unexpected exception " + e.getMessage());
+        } finally {
+            if (caseId != null) {
+                caseService.cancelCase(caseId);
+            }
+        }
+    }
+
+    @Test
+    public void testCaseWithSubCaseQuery() {
+
+        Map<String, OrganizationalEntity> roleAssignments = new HashMap<>();
+        roleAssignments.put("owner", new UserImpl("john"));
+        roleAssignments.put("manager", new UserImpl("mary"));
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", "John Doe");
+        CaseFileInstance caseFile = caseService.newCaseFileInstance(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, data, roleAssignments);
+
+        String caseId = caseService.startCase(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, caseFile);
+        assertNotNull(caseId);
+        assertEquals(SUB_CASE_ID, caseId);
+        try {
+            CaseInstance cInstance = caseService.getCaseInstance(caseId);
+            assertNotNull(cInstance);
+            assertEquals(deploymentUnit.getIdentifier(), cInstance.getDeploymentId());
+
+            caseService.triggerAdHocFragment(caseId, "Sub Case", null);
+
+            Collection<CaseInstance> caseInstances = caseRuntimeDataService.getCaseInstances(new QueryContext());
+            assertNotNull(caseInstances);
+            assertEquals(2, caseInstances.size());
+
+            // we check the parent
+            List<CaseStatus> allStatus = Arrays.asList(CaseStatus.values());
+            Collection<CaseInstance> subcases = caseRuntimeDataService.getSubCaseInstancesByParentCaseId(SUB_CASE_ID, allStatus, new QueryContext());
+            assertNotNull(subcases);
+            assertEquals(1, subcases.size());
+            List<String> childId = subcases.stream().map(CaseInstance::getCaseId).collect(Collectors.toList());
+            assertEquals(1, childId.size()); // only one child
+            assertTrue(childId.contains(HR_CASE_ID));
+            assertEquals(SUB_CASE_ID, subcases.iterator().next().getParentCaseId());
+
+            List<TaskSummary> tasks = caseRuntimeDataService.getCaseTasksAssignedAsPotentialOwner(HR_CASE_ID, "john", null, new QueryContext());
+            processService.abortProcessInstance(tasks.get(0).getProcessInstanceId());
+
         } catch (Exception e) {
             logger.error("Unexpected error {}", e.getMessage(), e);
             fail("Unexpected exception " + e.getMessage());
