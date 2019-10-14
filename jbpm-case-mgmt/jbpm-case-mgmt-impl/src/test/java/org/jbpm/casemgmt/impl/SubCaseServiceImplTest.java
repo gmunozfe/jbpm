@@ -71,18 +71,7 @@ public class SubCaseServiceImplTest extends AbstractCaseServicesBaseTest {
     @Test
     public void testStartCaseWithSubCaseDestroySubCase() {
         
-        Map<String, OrganizationalEntity> roleAssignments = new HashMap<>();
-        roleAssignments.put("owner", new UserImpl("john"));
-        roleAssignments.put("manager", new UserImpl("mary"));
-        
-        Map<String, Object> data = new HashMap<>();
-        data.put("name", "John Doe");
-        CaseFileInstance caseFile = caseService.newCaseFileInstance(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, data, roleAssignments);
-
-        
-        String caseId = caseService.startCase(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, caseFile);
-        assertNotNull(caseId);
-        assertEquals(SUB_CASE_ID, caseId);
+        String caseId = initAndDeployCaseScenario();
         try {
             CaseInstance cInstance = caseService.getCaseInstance(caseId);
             assertNotNull(cInstance);
@@ -434,18 +423,7 @@ public class SubCaseServiceImplTest extends AbstractCaseServicesBaseTest {
     @Test
     public void testStartCaseWithSubCaseAbortProcessInstanceOfSubCase() {
         
-        Map<String, OrganizationalEntity> roleAssignments = new HashMap<>();
-        roleAssignments.put("owner", new UserImpl("john"));
-        roleAssignments.put("manager", new UserImpl("mary"));
-        
-        Map<String, Object> data = new HashMap<>();
-        data.put("name", "John Doe");
-        CaseFileInstance caseFile = caseService.newCaseFileInstance(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, data, roleAssignments);
-
-        
-        String caseId = caseService.startCase(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, caseFile);
-        assertNotNull(caseId);
-        assertEquals(SUB_CASE_ID, caseId);
+        String caseId = initAndDeployCaseScenario();
         try {
             CaseInstance cInstance = caseService.getCaseInstance(caseId);
             assertNotNull(cInstance);
@@ -488,23 +466,8 @@ public class SubCaseServiceImplTest extends AbstractCaseServicesBaseTest {
 
     @Test
     public void testCaseWithSubCaseQuery() {
-
-        Map<String, OrganizationalEntity> roleAssignments = new HashMap<>();
-        roleAssignments.put("owner", new UserImpl("john"));
-        roleAssignments.put("manager", new UserImpl("mary"));
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("name", "John Doe");
-        CaseFileInstance caseFile = caseService.newCaseFileInstance(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, data, roleAssignments);
-
-        String caseId = caseService.startCase(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, caseFile);
-        assertNotNull(caseId);
-        assertEquals(SUB_CASE_ID, caseId);
+        String caseId = initAndDeployCaseScenario();
         try {
-            CaseInstance cInstance = caseService.getCaseInstance(caseId);
-            assertNotNull(cInstance);
-            assertEquals(deploymentUnit.getIdentifier(), cInstance.getDeploymentId());
-
             caseService.triggerAdHocFragment(caseId, "Sub Case", null);
 
             Collection<CaseInstance> caseInstances = caseRuntimeDataService.getCaseInstances(new QueryContext());
@@ -533,5 +496,49 @@ public class SubCaseServiceImplTest extends AbstractCaseServicesBaseTest {
             }
         }
     }
+    
+    @Test
+    public void testCaseWithEmptySubCaseQuery() {
+        String caseId = initAndDeployCaseScenario();
+        try {
+            Collection<CaseInstance> caseInstances = caseRuntimeDataService.getCaseInstances(new QueryContext());
+            assertNotNull(caseInstances);
+            assertEquals(1, caseInstances.size());
+
+            // no subcases for that parent
+            List<CaseStatus> allStatus = Arrays.asList(CaseStatus.values());
+            Collection<CaseInstance> subcases = caseRuntimeDataService.getSubCaseInstancesByParentCaseId(SUB_CASE_ID, allStatus, new QueryContext());
+            assertNotNull(subcases);
+            assertTrue(subcases.isEmpty());
+        } catch (Exception e) {
+            logger.error("Unexpected error {}", e.getMessage(), e);
+            fail("Unexpected exception " + e.getMessage());
+        } finally {
+            if (caseId != null) {
+                caseService.cancelCase(caseId);
+            }
+        }
+    }
+    
+    private String initAndDeployCaseScenario() {
+        Map<String, OrganizationalEntity> roleAssignments = new HashMap<>();
+        roleAssignments.put("owner", new UserImpl("john"));
+        roleAssignments.put("manager", new UserImpl("mary"));
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", "John Doe");
+        CaseFileInstance caseFile = caseService.newCaseFileInstance(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, data, roleAssignments);
+
+        String caseId = caseService.startCase(deploymentUnit.getIdentifier(), BASIC_SUB_CASE_P_ID, caseFile);
+        assertNotNull(caseId);
+        assertEquals(SUB_CASE_ID, caseId);
+        
+        CaseInstance cInstance = caseService.getCaseInstance(caseId);
+        assertNotNull(cInstance);
+        assertEquals(deploymentUnit.getIdentifier(), cInstance.getDeploymentId());
+        
+        return caseId;
+    }
+
 
 }
