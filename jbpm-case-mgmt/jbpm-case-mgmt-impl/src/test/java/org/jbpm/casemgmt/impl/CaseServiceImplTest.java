@@ -21,12 +21,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assertions.fail;
+import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -120,6 +124,7 @@ public class CaseServiceImplTest extends AbstractCaseServicesBaseTest {
         processes.add("cases/CaseMultiInstanceStage.bpmn2");
         processes.add("cases/UserTaskCaseData.bpmn2");
         processes.add("cases/CaseWithStageAndBoundaryTimer.bpmn2");
+        processes.add("cases/CaseWithBoundaryTimerStage.bpmn2");
         // add processes that can be used by cases but are not cases themselves
         processes.add("processes/DataVerificationProcess.bpmn2");
         return processes;
@@ -3728,6 +3733,50 @@ public class CaseServiceImplTest extends AbstractCaseServicesBaseTest {
             if (caseId != null) {
                 caseService.cancelCase(caseId);
             }
+        }
+    }
+
+    @Test
+    public void testCaseWithBoundaryTimerFiredAtStage() throws InterruptedException {
+        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
+
+        System.setOut(new PrintStream(outContent));
+
+        String caseId = caseService.startCase(deploymentUnit.getIdentifier(), "CaseWithBoundaryTimerStage");
+        assertNotNull(caseId);
+        assertEquals(FIRST_CASE_ID, caseId);
+        
+        Thread.sleep(3000);
+        
+        try {
+            Collection<CaseStageInstance> stages = caseRuntimeDataService.getCaseInstanceStages(caseId, false, null);
+            assertThat(stages).isNotNull().hasSize(2);
+            Iterator<CaseStageInstance> iterator = stages.iterator();
+
+            CaseStageInstance stage1 = iterator.next();
+            assertThat(stage1.getName()).isEqualTo("Stage 1");
+            assertThat(stage1.getStatus()).isEqualTo(StageStatus.Completed);
+
+            CaseStageInstance stage2 = iterator.next();
+            assertThat(stage2.getName()).isEqualTo("Stage 2");
+            assertThat(stage2.getStatus()).isEqualTo(StageStatus.Active);
+            
+            assertThat(outContent.toString(), containsString("timer on stage"));
+            assertThat(outContent.toString(), containsString("timer on task"));
+            
+            caseService.cancelCase(caseId);
+            CaseInstance instance = caseService.getCaseInstance(caseId);
+            assertThat(instance.getStatus()).isEqualTo(CaseStatus.CANCELLED.getId());
+            caseId = null;
+        } catch (Exception e) {
+            logger.error("Unexpected error {}", e.getMessage(), e);
+            fail("Unexpected exception " + e.getMessage());
+        } finally {
+            if (caseId != null) {
+                caseService.cancelCase(caseId);
+            }
+            System.setOut(originalOut);
         }
     }
 }
