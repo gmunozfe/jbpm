@@ -88,10 +88,10 @@
         </bpmn2:extensionElements>
         <bpmn2:incoming>_381E1A54-33C2-4570-86AA-67D0E277554C</bpmn2:incoming>
       </bpmn2:endEvent>
-      <bpmn2:scriptTask id="_90F8F6C6-3DB9-46C6-A55F-FDD028FDD71B" scriptFormat="http://www.java.com/java">
+      <bpmn2:scriptTask id="_90F8F6C6-3DB9-46C6-A55F-FDD028FDD71B" name="Internal Task" scriptFormat="http://www.java.com/java">
         <bpmn2:extensionElements>
           <drools:metaData name="elementname">
-            <drools:metaValue><![CDATA[]]></drools:metaValue>
+            <drools:metaValue><![CDATA[Internal Task]]></drools:metaValue>
           </drools:metaData>
         </bpmn2:extensionElements>
         <bpmn2:incoming>_6ABF598F-B32B-4968-AC5D-70F16C1FA4A2</bpmn2:incoming>
@@ -168,7 +168,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="shape__90F8F6C6-3DB9-46C6-A55F-FDD028FDD71B" bpmnElement="_90F8F6C6-3DB9-46C6-A55F-FDD028FDD71B">
         <dc:Bounds height="102.0" width="154.0" x="252.0" y="338.0"/>
-        <bpmndi:BPMNLabel id="BPMNLabel_3"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_3">
+          <dc:Bounds height="18.0" width="83.0" x="287.0" y="380.0"/>
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="shape__37250C53-D36A-426B-868A-CB9640CC934F" bpmnElement="_37250C53-D36A-426B-868A-CB9640CC934F">
         <dc:Bounds height="56.0" width="56.0" x="500.0" y="361.0"/>

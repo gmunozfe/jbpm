@@ -21,16 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assertions.fail;
-import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -71,6 +67,7 @@ import org.jbpm.casemgmt.api.model.instance.StageStatus;
 import org.jbpm.casemgmt.impl.model.instance.CaseInstanceImpl;
 import org.jbpm.casemgmt.impl.objects.EchoService;
 import org.jbpm.casemgmt.impl.util.AbstractCaseServicesBaseTest;
+import org.jbpm.casemgmt.impl.util.CountDownListenerFactory;
 import org.jbpm.document.Document;
 import org.jbpm.document.service.impl.DocumentImpl;
 import org.jbpm.services.api.TaskNotFoundException;
@@ -80,7 +77,10 @@ import org.jbpm.services.api.model.VariableDesc;
 import org.jbpm.services.task.impl.model.GroupImpl;
 import org.jbpm.services.task.impl.model.UserImpl;
 import org.jbpm.workflow.instance.node.MilestoneNodeInstance;
+import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.kie.api.command.ExecutableCommand;
 import org.kie.api.event.rule.MatchCreatedEvent;
 import org.kie.api.runtime.Context;
@@ -96,6 +96,7 @@ import org.kie.internal.KieInternalServices;
 import org.kie.internal.command.RegistryContext;
 import org.kie.internal.process.CorrelationKey;
 import org.kie.internal.query.QueryFilter;
+import org.kie.internal.runtime.conf.ObjectModel;
 import org.kie.internal.runtime.manager.context.ProcessInstanceIdContext;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -104,7 +105,16 @@ import org.slf4j.LoggerFactory;
 public class CaseServiceImplTest extends AbstractCaseServicesBaseTest {
 
     private static final Logger logger = LoggerFactory.getLogger(CaseServiceImplTest.class);
-
+    
+    @Rule
+    public TestName name = new TestName();
+    
+    @After
+    public void tearDown() { 
+        super.tearDown();
+        CountDownListenerFactory.clear();
+    }
+    
     @Override
     protected List<String> getProcessDefinitionFiles() {
         List<String> processes = new ArrayList<String>();
@@ -3705,13 +3715,13 @@ public class CaseServiceImplTest extends AbstractCaseServicesBaseTest {
         }
     }
     
-    @Test
+    @Test(timeout=10000)
     public void testCaseWithStageAndBoundaryTimerFired() throws InterruptedException {
         String caseId = caseService.startCase(deploymentUnit.getIdentifier(), "CaseWithStageAndBoundaryTimer");
         assertNotNull(caseId);
         assertEquals(FIRST_CASE_ID, caseId);
         
-        Thread.sleep(2000);
+        CountDownListenerFactory.getExisting("Internal Task").waitTillCompleted();
         
         try {
             Collection<CaseStageInstance> stages = caseRuntimeDataService.getCaseInstanceStages(caseId, false, null);
@@ -3736,18 +3746,13 @@ public class CaseServiceImplTest extends AbstractCaseServicesBaseTest {
         }
     }
 
-    @Test
+    @Test(timeout=10000)
     public void testCaseWithBoundaryTimerFiredAtStage() throws InterruptedException {
-        ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-        PrintStream originalOut = System.out;
-
-        System.setOut(new PrintStream(outContent));
-
         String caseId = caseService.startCase(deploymentUnit.getIdentifier(), "CaseWithBoundaryTimerStage");
         assertNotNull(caseId);
         assertEquals(FIRST_CASE_ID, caseId);
         
-        Thread.sleep(3000);
+        CountDownListenerFactory.getExisting("Internal Task").waitTillCompleted();
         
         try {
             Collection<CaseStageInstance> stages = caseRuntimeDataService.getCaseInstanceStages(caseId, false, null);
@@ -3762,8 +3767,8 @@ public class CaseServiceImplTest extends AbstractCaseServicesBaseTest {
             assertThat(stage2.getName()).isEqualTo("Stage 2");
             assertThat(stage2.getStatus()).isEqualTo(StageStatus.Active);
             
-            assertThat(outContent.toString(), containsString("timer on stage"));
-            assertThat(outContent.toString(), containsString("timer on task"));
+            //check that case has executed External Task
+            CountDownListenerFactory.getExisting("External Task").waitTillCompleted();
             
             caseService.cancelCase(caseId);
             CaseInstance instance = caseService.getCaseInstance(caseId);
@@ -3776,7 +3781,20 @@ public class CaseServiceImplTest extends AbstractCaseServicesBaseTest {
             if (caseId != null) {
                 caseService.cancelCase(caseId);
             }
-            System.setOut(originalOut);
         }
+    }
+    
+    @Override
+    protected List<ObjectModel> getProcessListeners() {
+        List<ObjectModel> listeners = super.getProcessListeners();
+        
+        if (name.getMethodName().equals("testCaseWithBoundaryTimerFiredAtStage")) {
+          listeners.add(new ObjectModel("mvel", "org.jbpm.casemgmt.impl.util.CountDownListenerFactory.get(\"Internal Task\", \"Internal Task\", 1)"));
+          listeners.add(new ObjectModel("mvel", "org.jbpm.casemgmt.impl.util.CountDownListenerFactory.get(\"External Task\", \"External Task\", 1)"));
+        } else if (name.getMethodName().equals("testCaseWithStageAndBoundaryTimerFired")) {
+          listeners.add(new ObjectModel("mvel", "org.jbpm.casemgmt.impl.util.CountDownListenerFactory.get(\"Internal Task\", \"Internal Task\", 1)"));
+        }
+        
+        return listeners;
     }
 }
