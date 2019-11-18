@@ -19,6 +19,7 @@
   <properties>
     <java.module.name>org.jbpm.bpmn2</java.module.name>
     <maven.jdbc.url>jdbc:h2:tcp://localhost/target/jbpm-bpmn-db;MVCC=TRUE</maven.jdbc.url>
+    <version.org.mvel>2.4.5-SNAPSHOT</version.org.mvel>
   </properties>
 
   <dependencies>
