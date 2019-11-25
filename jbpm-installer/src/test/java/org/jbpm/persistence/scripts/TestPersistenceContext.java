@@ -119,22 +119,22 @@ public final class TestPersistenceContext {
      * @param scriptsRootFolder Root folder containing folders with SQL scripts for all supported database systems.
      * @throws IOException
      */
-    public void executeScripts(final File scriptsRootFolder) throws IOException, SQLException {
-        executeScripts(scriptsRootFolder, null);
+    public void executeScripts(final File scriptsRootFolder, boolean dropFilesExcluded) throws IOException, SQLException {
+        executeScripts(scriptsRootFolder, dropFilesExcluded, null);
     }
     
-    public void executeScripts(final File scriptsRootFolder, String type) throws IOException, SQLException {
+    public void executeScripts(final File scriptsRootFolder, boolean dropFilesExcluded, String type) throws IOException, SQLException {
         testIsInitialized();
-        final File[] sqlScripts = TestsUtil.getDDLScriptFilesByDatabaseType(scriptsRootFolder, databaseType, true);
+        final File[] sqlScripts = TestsUtil.getDDLScriptFilesByDatabaseType(scriptsRootFolder, databaseType, true, dropFilesExcluded);
         final Connection connection = ((PoolingDataSourceWrapper) context.get(PersistenceUtil.DATASOURCE)).getConnection();
         connection.setAutoCommit(false);
         try {
             for (File script : sqlScripts) {
                 if (type == null || script.getName().startsWith(type)) {
-                    logger.debug("Executing script {}", script.getName());
+                    logger.info("Executing script {}", script.getName());
                     final List<String> scriptCommands = SQLScriptUtil.getCommandsFromScript(script, databaseType);
                     for (String command : scriptCommands) {
-                        logger.debug(command);
+                        logger.info("query: "+command);
                         final PreparedStatement statement;
                         if (databaseType == DatabaseType.SQLSERVER || databaseType == DatabaseType.SQLSERVER2008) {
                             statement = connection.prepareStatement(
