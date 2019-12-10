@@ -49,6 +49,7 @@ public class UpgradeScriptsTest extends ScriptsBase{
     
     private void dropFinalSchemaAfterUpgradingUsingDDLs() throws IOException, SQLException {
         //drop schema
+        //need to drop constraints from 6.0 first
         executeScriptRunner(DB_60_SCRIPTS_RESOURCE_PATH, false);
         executeScriptRunner(DB_DDL_SCRIPTS_RESOURCE_PATH, false);
     }
