@@ -43,6 +43,7 @@ public class StageActivationConditionTest extends AbstractCaseServicesBaseTest {
 
     private static final String STAGE_WITH_ACTIVATION_COND = "NoStartNodeAdhocCaseWithActivationCondition";
     private static final String STAGE_WITH_ACTIVATION_COND_NO_TERMINATE = "NoStartNodeAdhocCaseWithActivationConditionNoTerminate";
+    private static final String STAGE_WITH_ACTIVATION_COND_TWO_STAGES = "NoStartNodeTwoStages";
 
 
     @Override
@@ -50,6 +51,7 @@ public class StageActivationConditionTest extends AbstractCaseServicesBaseTest {
         List<String> processes = new ArrayList<>();
         processes.add("cases/stage/activation/NoStartNodeAdhocCaseWithActivationCondition.bpmn2");
         processes.add("cases/stage/activation/NoStartNodeAdhocCaseWithActivationConditionNoTerminate.bpmn2");
+        processes.add("cases/stage/activation/NoStartNodeTwoStages.bpmn2");
         return processes;
     }
     
@@ -88,6 +90,43 @@ public class StageActivationConditionTest extends AbstractCaseServicesBaseTest {
         
         List<String> completedNodeNames = history.stream().map(ni -> ni.getName()).collect(Collectors.toList());
         assertThat(completedNodeNames).contains("stage", "end");
+        
+        caseService.closeCase(caseId, "closing for real");
+
+        assertCaseInstanceNotActive(caseId);
+    }
+    
+    @Test
+    public void testReopenWithTwoStagesReevaluation() {
+        String caseId = caseService.startCase(deploymentUnit.getIdentifier(), STAGE_WITH_ACTIVATION_COND_TWO_STAGES);
+        assertThat(caseId).isNotNull().isEqualTo(FIRST_CASE_ID);
+        assertCaseInstanceActive(caseId);
+        
+        caseService.triggerAdHocFragment(caseId, "Adhoc 1", null);
+        
+        Collection<CaseStageInstance> activeStages = caseRuntimeDataService.getCaseInstanceStages(caseId, true, new QueryContext());
+        assertThat(activeStages).hasSize(0);
+
+        caseService.addDataToCaseFile(caseId, "readyToActivate", true);
+        caseService.addDataToCaseFile(caseId, "readyToPreStage", true);
+        
+        activeStages = caseRuntimeDataService.getCaseInstanceStages(caseId, true, new QueryContext());
+        assertThat(activeStages).hasSize(2);
+        
+        caseService.addDataToCaseFile(caseId, "readyToComplete", true);
+        
+        activeStages = caseRuntimeDataService.getCaseInstanceStages(caseId, true, new QueryContext());
+        assertThat(activeStages).hasSize(1);
+        
+        caseService.closeCase(caseId, "closing for test");
+             
+        caseService.reopenCase(caseId, deploymentUnit.getIdentifier(), STAGE_WITH_ACTIVATION_COND_TWO_STAGES);
+        
+        CaseInstance ci = caseService.getCaseInstance(caseId);
+        
+        activeStages = caseRuntimeDataService.getCaseInstanceStages(caseId, true, new QueryContext());
+        //expect prestage is still active
+        assertThat(activeStages).hasSize(1);
         
         caseService.closeCase(caseId, "closing for real");
 
