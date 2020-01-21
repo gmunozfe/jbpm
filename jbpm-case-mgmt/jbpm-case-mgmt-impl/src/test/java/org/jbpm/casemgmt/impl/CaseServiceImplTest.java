@@ -3796,4 +3796,58 @@ public class CaseServiceImplTest extends AbstractCaseServicesBaseTest {
             }
         }
     }
+    
+    @Test
+    public void testCaseWithHumanTaskAfterReopen() {
+        Map<String, OrganizationalEntity> roleAssignments = new HashMap<>();
+        roleAssignments.put("owner", new UserImpl("john"));
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("contactInfo", "main street 10, NYC");
+        CaseFileInstance caseFile = caseService.newCaseFileInstance(deploymentUnit.getIdentifier(), USER_TASK_DATA_CASE_P_ID, data, roleAssignments);
+
+        String caseId = caseService.startCase(deploymentUnit.getIdentifier(), USER_TASK_DATA_CASE_P_ID, caseFile);
+        assertNotNull(caseId);
+        assertEquals(FIRST_CASE_ID, caseId);
+        try {
+            CaseInstance cInstance = caseService.getCaseInstance(caseId, true, false, false, false);
+            assertNotNull(cInstance);
+            assertEquals(deploymentUnit.getIdentifier(), cInstance.getDeploymentId());
+            
+            identityProvider.setName("john");
+            List<TaskSummary> tasks = caseRuntimeDataService.getCaseTasksAssignedAsPotentialOwner(caseId, "john", null, new QueryContext());
+            assertThat(tasks).isNotNull().hasSize(1);
+            
+            Map<String, Object> results = new HashMap<>();
+            results.put("reply_", "here is my reply");
+            
+            userTaskService.completeAutoProgress(tasks.get(0).getId(), "john", results);
+            
+            caseService.closeCase(caseId, "closed temporarily");
+            caseService.reopenCase(caseId, deploymentUnit.getIdentifier(), USER_TASK_DATA_CASE_P_ID);
+            cInstance = caseService.getCaseInstance(caseId, true, false, false, false);
+            assertNotNull(cInstance);
+            assertEquals(deploymentUnit.getIdentifier(), cInstance.getDeploymentId());
+            
+            Map<String, Object> caseData = cInstance.getCaseFile().getData();
+            assertNotNull(caseData);
+            assertEquals(2, caseData.size());  
+            assertEquals("main street 10, NYC", caseData.get("contactInfo"));
+            assertEquals("here is my reply", caseData.get("reply"));
+            
+            Collection<CaseFileItem> dataItems = caseRuntimeDataService.getCaseInstanceDataItems(caseId, new QueryContext());
+            assertThat(dataItems).isNotNull().hasSize(2);
+                        
+            Map<String, CaseFileItem> mappedDataItems = dataItems.stream().collect(toMap(CaseFileItem::getName, t -> t));
+            assertThat(mappedDataItems).containsKeys("reply", "contactInfo");
+        } catch (Exception e) {
+            logger.error("Unexpected error {}", e.getMessage(), e);
+            fail("Unexpected exception " + e.getMessage());
+        } finally {
+            if (caseId != null) {
+                identityProvider.setName("john");
+                caseService.cancelCase(caseId);
+            }
+        }
+    }
 }
