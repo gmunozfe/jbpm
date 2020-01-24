@@ -16,6 +16,7 @@
 
 package org.jbpm.executor.commands.error;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -24,6 +25,8 @@ import javax.persistence.EntityManager;
 import org.jbpm.executor.impl.error.JobExecutionErrorFilter;
 import org.jbpm.runtime.manager.impl.jpa.ExecutionErrorInfo;
 import org.kie.api.executor.STATUS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Command that will auto acknowledge async jobs errors based on their status:
@@ -40,22 +43,29 @@ import org.kie.api.executor.STATUS;
  */
 public class JobAutoAckErrorCommand extends AutoAckErrorCommand {
 
+    private static final Logger logger = LoggerFactory.getLogger(JobAutoAckErrorCommand.class);
+
     private static final String RULE = "Jobs that previously failed but now are in one of the statuses - queued, completed or cancelled";
     
     @SuppressWarnings("unchecked")
     @Override
     protected List<ExecutionErrorInfo> findErrorsToAck(EntityManager em) {
-        String findJobErrorsQuery = "select error from ExecutionErrorInfo error "
-                + "where error.type = :type "
-                + "and error.acknowledged =:acknowledged "
-                + "and error.jobId in (select req.id from RequestInfo req where status in (:status))";
-        
-        List<ExecutionErrorInfo> errorsToAck = em.createQuery(findJobErrorsQuery)
-                .setParameter("type", JobExecutionErrorFilter.TYPE)
-                .setParameter("acknowledged", new Short("0"))
-                .setParameter("status", Arrays.asList(STATUS.DONE, STATUS.CANCELLED, STATUS.QUEUED))
-                .getResultList();
+        List<ExecutionErrorInfo> errorsToAck = new ArrayList<>();
+        em.getTransaction().begin();
+        try {
+            String findJobErrorsQuery = "select error from ExecutionErrorInfo error " + "where error.type = :type " + "and error.acknowledged =:acknowledged " +
+                                        "and error.jobId in (select req.id from RequestInfo req where status in (:status))";
 
+            errorsToAck = em.createQuery(findJobErrorsQuery)
+                            .setParameter("type", JobExecutionErrorFilter.TYPE)
+                            .setParameter("acknowledged", new Short("0"))
+                            .setParameter("status", Arrays.asList(STATUS.DONE, STATUS.CANCELLED, STATUS.QUEUED))
+                            .getResultList();
+            em.getTransaction().commit();
+        } catch (Exception e) {
+            logger.error("Execution error in command ProcessAutoAckErrorCommand", e);
+            em.getTransaction().rollback();
+        }
         return errorsToAck;
         
     }
