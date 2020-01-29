@@ -25,6 +25,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Stream;
 
 import javax.persistence.EntityManagerFactory;
 
@@ -37,6 +38,9 @@ import org.jbpm.services.task.identity.JBossUserGroupCallbackImpl;
 import org.jbpm.test.util.AbstractExecutorBaseTest;
 import org.jbpm.test.util.ExecutorTestUtil;
 import org.kie.test.util.db.PoolingDataSourceWrapper;
+import org.jbpm.workflow.core.impl.WorkflowProcessImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,9 +62,12 @@ import org.kie.api.task.UserGroupCallback;
 import org.kie.api.task.model.TaskSummary;
 import org.kie.internal.io.ResourceFactory;
 import org.kie.internal.runtime.manager.RuntimeManagerRegistry;
+import org.kie.internal.runtime.manager.audit.query.AuditLogQueryBuilder;
 import org.kie.internal.runtime.manager.context.EmptyContext;
 
 public class SLATrackingCommandTest extends AbstractExecutorBaseTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(SLATrackingCommandTest.class);
 
     private PoolingDataSourceWrapper pds;
     private UserGroupCallback userGroupCallback;  
@@ -176,7 +183,10 @@ public class SLATrackingCommandTest extends AbstractExecutorBaseTest {
         
         runtime.getTaskService().start(tasks.get(0).getId(), "john");
         runtime.getTaskService().complete(tasks.get(0).getId(), "john", null);
-              
+        
+       
+                                
+        
         assertNodeInstanceSLACompliance(logService, processInstance.getId(), "Hello", ProcessInstance.SLA_VIOLATED);
     }
     
@@ -327,13 +337,37 @@ public class SLATrackingCommandTest extends AbstractExecutorBaseTest {
 	}
 	
    private void assertNodeInstanceSLACompliance(JPAAuditLogService logService, Long processInstanceId, String name, int slaCompliance) {
-        List<NodeInstanceLog> logs = logService.nodeInstanceLogQuery()
+        /*List<NodeInstanceLog> logs = logService.nodeInstanceLogQuery()
                 .processInstanceId(processInstanceId).and()
-                .nodeName(name)                
+                .nodeName(name)
                 .build()
                 .getResultList();
-                        
+       
+        NodeInstanceLog log  = logs.stream()
+                .filter(n -> n.getName().equals("Hello")).findFirst().get();
+                
+                */
+
+               
+        
+        List<? extends NodeInstanceLog> logs = logService.findNodeInstances(processInstanceId, "_2"); 
+        
+        
+        logger.info("@@@ logs: "+logs);
+        
+        logger.info("@@@ id(0): "+logs.get(0).getNodeId());
+        logger.info("@@@ date(0): "+logs.get(0).getDate());
+                                
         NodeInstanceLog log = logs.get(logs.size() - 1);
+        logger.info("@@@ NodeInstanceLog: "+log);
+        logger.info("@@@ name: "+log.getNodeName());
+        logger.info("@@@ type: "+log.getType());
+        logger.info("@@@ id: "+log.getNodeId());
+        logger.info("@@@ date: "+log.getDate());
+        logger.info("@@@ sla: "+((org.jbpm.process.audit.NodeInstanceLog)log).getSlaCompliance());
+        logger.info("@@@ processInstanceId: "+processInstanceId);
+        logger.info("@@@ slaCompliance: "+slaCompliance);
+        
         assertEquals(processInstanceId, log.getProcessInstanceId());
         assertEquals(slaCompliance, ((org.jbpm.process.audit.NodeInstanceLog)log).getSlaCompliance().intValue());
     }
