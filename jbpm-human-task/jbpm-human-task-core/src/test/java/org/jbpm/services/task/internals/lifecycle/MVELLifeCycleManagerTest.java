@@ -22,12 +22,10 @@ import java.util.List;
 
 import org.jbpm.services.task.exception.PermissionDeniedException;
 import org.jbpm.services.task.impl.factories.TaskFactory;
-import org.jbpm.services.task.impl.model.UserImpl;
 import org.junit.Test;
 import org.kie.api.task.model.PeopleAssignments;
 import org.kie.api.task.model.Status;
 import org.kie.api.task.model.Task;
-import org.kie.api.task.model.User;
 import org.kie.internal.task.api.model.InternalTask;
 import org.kie.internal.task.api.model.Operation;
 
@@ -40,7 +38,7 @@ public class MVELLifeCycleManagerTest {
 	@Test(expected = PermissionDeniedException.class)
 	public void testClaimIsAllowedExcludedOwner() {
 
-		User testUser = new UserImpl("BB8");
+        String testUser = "BB8";
 
 		List<String> testGroupIds = new ArrayList<>();
 		testGroupIds.add("testGroup1");
@@ -80,7 +78,7 @@ public class MVELLifeCycleManagerTest {
 	@Test
 	public void testDelegateIsAllowedExcludedOwnerBusinessAdministrator() {
 
-		User testUser = new UserImpl("BB8");
+        String testUser = "BB8";
 
 		List<String> testGroupIds = new ArrayList<>();
 		testGroupIds.add("testGroup1");

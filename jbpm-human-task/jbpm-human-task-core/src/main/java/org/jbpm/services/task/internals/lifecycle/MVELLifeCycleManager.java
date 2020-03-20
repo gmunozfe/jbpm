@@ -109,11 +109,13 @@ public class MVELLifeCycleManager implements LifeCycleManager {
     
 
     void evalCommand(final Operation operation, final List<OperationCommand> commands, final Task task,
-            final User user, final OrganizationalEntity targetEntity,
+                     final String userId,
+                     final OrganizationalEntity targetEntity,
             List<String> groupIds, OrganizationalEntity...entities) throws PermissionDeniedException {
 
         boolean statusMatched = false;
         final TaskData taskData = task.getTaskData();
+        User user = userId != null ? persistenceContext.findUser(userId) : null;
         for (OperationCommand command : commands) {
             // first find out if we have a matching status
             if (command.getStatus() != null) {
@@ -122,7 +124,7 @@ public class MVELLifeCycleManager implements LifeCycleManager {
                         statusMatched = true;
                         // next find out if the user can execute this doOperation
                         if (!isAllowed(command, task, user, groupIds)) {
-                            String errorMessage = "User '" + user + "' does not have permissions to execute operation '" + operation + "' on task id " + task.getId();
+                            String errorMessage = "User '" + userId + "' does not have permissions to execute operation '" + operation + "' on task id " + task.getId();
 
                             throw new PermissionDeniedException(errorMessage);
                         }
@@ -141,7 +143,7 @@ public class MVELLifeCycleManager implements LifeCycleManager {
 
                         // next find out if the user can execute this doOperation
                         if (!isAllowed(command, task, user, groupIds)) {
-                            String errorMessage = "User '" + user + "' does not have permissions to execute operation '" + operation + "' on task id " + task.getId();
+                            String errorMessage = "User '" + userId + "' does not have permissions to execute operation '" + operation + "' on task id " + task.getId();
                             throw new PermissionDeniedException(errorMessage);
                         }
 
@@ -159,7 +161,7 @@ public class MVELLifeCycleManager implements LifeCycleManager {
             }
         }
         if (!statusMatched) {
-            String errorMessage = "User '" + user + "' was unable to execute operation '" + operation + "' on task id " + task.getId() + " due to a no 'current status' match";
+            String errorMessage = "User '" + userId + "' was unable to execute operation '" + operation + "' on task id " + task.getId() + " due to a no 'current status' match";
             throw new PermissionDeniedException(errorMessage);
         }
         
@@ -311,7 +313,7 @@ public class MVELLifeCycleManager implements LifeCycleManager {
                 taskContentService.loadTaskVariables(task);
             }
 
-            User user = persistenceContext.findUser(userId);
+
             OrganizationalEntity targetEntity = null;
             if (targetEntityId != null && !targetEntityId.equals("")) {
                 targetEntity = persistenceContext.findOrgEntity(targetEntityId);
@@ -389,7 +391,7 @@ public class MVELLifeCycleManager implements LifeCycleManager {
 
             }
             
-            evalCommand(operation, commands, task, user, targetEntity, groupIds, entities);
+            evalCommand(operation, commands, task, userId, targetEntity, groupIds, entities);
             
             persistenceContext.updateTask(task);
 

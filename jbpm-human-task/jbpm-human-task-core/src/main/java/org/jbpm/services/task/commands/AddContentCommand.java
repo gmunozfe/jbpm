@@ -15,10 +15,8 @@
  */
 package org.jbpm.services.task.commands;
 
-import org.drools.core.xml.jaxb.util.JaxbMapAdapter;
-import org.jbpm.services.task.impl.model.xml.JaxbContent;
-import org.kie.api.runtime.Context;
-import org.kie.api.task.model.Content;
+import java.util.List;
+import java.util.Map;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -26,7 +24,12 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-import java.util.Map;
+
+import org.drools.core.xml.jaxb.util.JaxbMapAdapter;
+import org.jbpm.services.task.impl.model.xml.JaxbContent;
+import org.kie.api.runtime.Context;
+import org.kie.api.task.model.Content;
+import org.kie.internal.task.api.model.Operation;
 
 
 @XmlRootElement(name="add-content-command")
@@ -60,7 +63,7 @@ public class AddContentCommand extends TaskCommand<Long> {
 
     public Long execute(Context cntxt) {
         TaskContext context = (TaskContext) cntxt;
-        
+        context.getMvelLifeCycleManager().taskOperation(Operation.Modify, taskId, userId, null, null, (List<String>) context.get("local:groups"));
         if (params != null) {
         	return context.getTaskContentService().addOutputContent(taskId, params);
         } else {        
