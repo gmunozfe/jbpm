@@ -22,23 +22,42 @@ import java.util.List;
 
 import org.jbpm.services.task.exception.PermissionDeniedException;
 import org.jbpm.services.task.impl.factories.TaskFactory;
+import org.jbpm.services.task.impl.model.UserImpl;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.kie.api.task.model.PeopleAssignments;
 import org.kie.api.task.model.Status;
 import org.kie.api.task.model.Task;
+import org.kie.api.task.model.User;
+import org.kie.internal.task.api.TaskPersistenceContext;
 import org.kie.internal.task.api.model.InternalTask;
 import org.kie.internal.task.api.model.Operation;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
+import static org.mockito.Mockito.when;
+
+@RunWith(MockitoJUnitRunner.class)
 public class MVELLifeCycleManagerTest {
-
+    
+    @Mock
+    private TaskPersistenceContext persistenceContext;
+    
+    private String testUser = "BB8";
+    
+    @Before
+    public void initialize() {
+        User testUserImpl = new UserImpl(testUser);
+        when(persistenceContext.findUser(testUser)).thenReturn(testUserImpl);
+    }
+    
 	/**
 	 * Tests that a user who is in the ExcludedOwners list of the {@link Task task's) {@link PeopleAssignments peopleAssignment's) object is
 	 * not allowed to execute operations on the given task. We expect to get a {@link PermissionDeniedException}.
 	 */
 	@Test(expected = PermissionDeniedException.class)
 	public void testClaimIsAllowedExcludedOwner() {
-
-        String testUser = "BB8";
 
 		List<String> testGroupIds = new ArrayList<>();
 		testGroupIds.add("testGroup1");
@@ -68,6 +87,7 @@ public class MVELLifeCycleManagerTest {
 
 		// We don't need "targetEntity" and "entities" for this test.
 		MVELLifeCycleManager taskLcManager = new MVELLifeCycleManager();
+		taskLcManager.setPersistenceContext(persistenceContext);
 		taskLcManager.evalCommand(operation, operationCommands, task, testUser, null, testGroupIds, null);
 	}
 
@@ -77,8 +97,6 @@ public class MVELLifeCycleManagerTest {
 	 */
 	@Test
 	public void testDelegateIsAllowedExcludedOwnerBusinessAdministrator() {
-
-        String testUser = "BB8";
 
 		List<String> testGroupIds = new ArrayList<>();
 		testGroupIds.add("testGroup1");
@@ -112,6 +130,7 @@ public class MVELLifeCycleManagerTest {
 
 		// We don't need "targetEntity" and "entities" for this test.
 		MVELLifeCycleManager taskLcManager = new MVELLifeCycleManager();
+		taskLcManager.setPersistenceContext(persistenceContext);
 		taskLcManager.evalCommand(operation, operationCommands, task, testUser, null, testGroupIds, null);
 	}
 }
