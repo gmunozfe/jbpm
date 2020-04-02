@@ -13,9 +13,17 @@
 
   <properties>
     <java.module.name>org.jbpm.kie.services.api</java.module.name>
+    <version.com.h2database>1.4.193</version.com.h2database>
+    
   </properties>
 
   <dependencies>
+    <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+        <scope>test</scope>
+    </dependency>
+  
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-artifact</artifactId>

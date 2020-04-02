@@ -186,12 +186,19 @@ public abstract class AbstractServicesTest {
 
     protected void buildDatasource() {
         Properties driverProperties = new Properties();
-        driverProperties.put("user", "sa");
+        /*driverProperties.put("user", "sa");
         driverProperties.put("password", "sasa");
         driverProperties.put("url", "jdbc:h2:mem:mydb");
         driverProperties.put("driverClassName", "org.h2.Driver");
-        driverProperties.put("className", "org.h2.jdbcx.JdbcDataSource");
-
+        driverProperties.put("className", "org.h2.jdbcx.JdbcDataSource");*/
+        driverProperties.put("user", "root");
+        driverProperties.put("password", "Redhat123!");
+        driverProperties.put("url", "jdbc:mysql://localhost:3306/rhpam7");
+        driverProperties.put("driverClassName", "com.mysql.jdbc.Driver");
+        driverProperties.put("className", "com.mysql.jdbc.jdbc2.optional.MysqlXADataSource");
+        driverProperties.put("databaseName", "rhpam7");
+        driverProperties.put("portNumber", "3306");
+        driverProperties.put("serverName", "localhost");
         ds = DataSourceFactory.setupPoolingDataSource(getJndiDatasourceName(), driverProperties);
     }
 

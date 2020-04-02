@@ -12,6 +12,9 @@
   <logger name="org.jbpm" level="info"/>
   <logger name="com.arjuna" level="error"/>
   
+  <!-- logger name="org.hibernate.SQL" level="debug"/-->
+  <!-- logger name="org.hibernate.type.descriptor.sql" level="trace"/-->
+  
   <!--  hibernate -->
   <logger name="org.hibernate" level="warn"/>
   <logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off" />

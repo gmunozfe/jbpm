@@ -100,7 +100,12 @@ public abstract class AbstractAdvanceRuntimeDataServiceImpl {
         }
         query.setParameter("processType", processType);
 
+        System.out.println("@@----------------------------------------------------start ");
+        System.out.println("procSQLString: "+procSQLString);
         List<Number> ids = query.getResultList();
+        System.out.println("@@----------------------------------------------------end ");
+        System.out.println("");
+        System.out.println("");
         if (ids.isEmpty()) {
             return Collections.emptyList();
         }
@@ -230,13 +235,17 @@ public abstract class AbstractAdvanceRuntimeDataServiceImpl {
             return Collections.emptyList();
         }
 
-
+        System.out.println("@@ ids: "+ids);
         // query data
         List<Object[]> taskRows = commandService.execute(new QueryNameCommand<List<Object[]>>("GetTasksByIdList", singletonMap("idList", ids)));
+        System.out.println("@@ taskRows: "+taskRows);
         List<Object[]> varRows = commandService.execute(new QueryNameCommand<List<Object[]>>("GetTaskVariablesByTaskIdList", singletonMap("idList", ids)));
+        System.out.println("@@ varRows: "+varRows);
         List<Object[]> potRows = commandService.execute(new QueryNameCommand<List<Object[]>>("GetPotentialOwnersByTaskIdList", singletonMap("idList", ids)));
+        System.out.println("@@ potRows: "+potRows);
         List<Object[]> varProcSQLRows = commandService.execute(new QueryNameCommand<List<Object[]>>("GeProcessVariablesByTaskIdList", singletonMap("idList", ids)));
-
+        System.out.println("@@ varProcSQLRows: "+varProcSQLRows);
+        
         int currentVarIdx = 0;
         int currentPotIdx = 0;
         int currentVarProcIdx = 0;
@@ -245,6 +254,8 @@ public abstract class AbstractAdvanceRuntimeDataServiceImpl {
             UserTaskInstanceWithPotOwnerDesc pwv = toUserTaskInstanceWithPotOwnerDesc(row);
 
             while (currentVarIdx < varRows.size() && row[0].equals(varRows.get(currentVarIdx)[0])) {
+                System.out.println("currentVarIdx: "+currentVarIdx);
+                System.out.println("row[0]: "+row[0]);
                 if (((Number) varRows.get(currentVarIdx)[1]).intValue() == 0) {
                     pwv.addInputdata((String) varRows.get(currentVarIdx)[2], varRows.get(currentVarIdx)[3]);
                 } else {
@@ -255,6 +266,8 @@ public abstract class AbstractAdvanceRuntimeDataServiceImpl {
 
             pwv.getPotentialOwners().clear();
             while (currentPotIdx < potRows.size() && row[0].equals(potRows.get(currentPotIdx)[0])) {
+                System.out.println("currentPotIdx: "+currentVarIdx);
+                System.out.println("row[0]: "+row[0]);
                 pwv.addPotOwner((String) potRows.get(currentPotIdx)[1]);
                 currentPotIdx++;
             }
@@ -262,6 +275,9 @@ public abstract class AbstractAdvanceRuntimeDataServiceImpl {
             while (currentVarProcIdx < varProcSQLRows.size() && row[0].equals(varProcSQLRows.get(currentVarProcIdx)[0])) {
                 String name = (String) varProcSQLRows.get(currentVarProcIdx)[1];
                 Object value = varProcSQLRows.get(currentVarProcIdx)[2];
+                System.out.println("currentVarProcIdx: "+currentVarProcIdx);
+                System.out.println("name: "+name+ ", value:"+value);
+                System.out.println("row[0]: "+row[0]);
                 if (!varPrefix.isEmpty() && name.startsWith(varPrefix)) {
                     pwv.addExtraData(name.substring(varPrefix.length()), value);
                 } else {

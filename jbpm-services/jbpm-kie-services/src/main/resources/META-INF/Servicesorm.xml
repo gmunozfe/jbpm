@@ -1215,8 +1215,8 @@
                      log.processInstanceDescription 
                 FROM Task task 
           INNER JOIN ProcessInstanceLog log ON log.processInstanceId = task.processInstanceId
-               WHERE Task.id IN (:idList)
-            ORDER BY Task.id ASC 
+               WHERE task.id IN (:idList)
+            ORDER BY task.id ASC 
       </query>
   </named-native-query>
   <named-native-query name="GetTaskVariablesByTaskIdList">
