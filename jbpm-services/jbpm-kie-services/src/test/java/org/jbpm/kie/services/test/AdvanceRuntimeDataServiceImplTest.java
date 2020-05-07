@@ -28,9 +28,11 @@ import java.util.Map;
 import org.drools.compiler.kie.builder.impl.InternalKieModule;
 import org.jbpm.kie.services.impl.KModuleDeploymentUnit;
 import org.jbpm.kie.test.util.AbstractKieServicesBaseTest;
+import org.jbpm.services.api.AdvanceRuntimeDataService;
 import org.jbpm.services.api.ProcessInstanceNotFoundException;
 import org.jbpm.services.api.model.DeploymentUnit;
 import org.jbpm.services.api.model.ProcessInstanceWithVarsDesc;
+import org.jbpm.services.api.model.UserTaskInstanceDesc;
 import org.jbpm.services.api.model.UserTaskInstanceWithPotOwnerDesc;
 import org.jbpm.services.api.query.model.QueryParam;
 import org.junit.After;
@@ -50,6 +52,8 @@ import org.slf4j.LoggerFactory;
 
 import static java.util.Collections.emptyList;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.jbpm.services.api.AdvanceRuntimeDataService.PROCESS_ATTR_CORRELATION_KEY;
 import static org.jbpm.services.api.AdvanceRuntimeDataService.PROCESS_ATTR_DEFINITION_ID;
 import static org.jbpm.services.api.AdvanceRuntimeDataService.PROCESS_ATTR_DEPLOYMENT_ID;
@@ -65,6 +69,8 @@ import static org.jbpm.services.api.query.model.QueryParam.notEqualsTo;
 import static org.jbpm.services.api.query.model.QueryParam.notIn;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.kie.scanner.KieMavenRepository.getKieMavenRepository;
 
 @RunWith(Parameterized.class)
@@ -188,7 +194,7 @@ public class AdvanceRuntimeDataServiceImplTest extends AbstractKieServicesBaseTe
         }
         List<String> values = Arrays.asList("a1", "a2");
         for (ProcessInstanceWithVarsDesc p : data) {
-            Assert.assertTrue(values.contains(p.getVariables().get("var_a")));
+            assertTrue(values.contains(p.getVariables().get("var_a")));
             Assert.assertEquals("test.test_A", p.getProcessId());
         }
     }
@@ -205,7 +211,7 @@ public class AdvanceRuntimeDataServiceImplTest extends AbstractKieServicesBaseTe
         }
 
         for (ProcessInstanceWithVarsDesc p : data) {
-            Assert.assertTrue(((String) p.getVariables().get("var_a")).startsWith("a"));
+            assertTrue(((String) p.getVariables().get("var_a")).startsWith("a"));
             Assert.assertEquals("test.test_A", p.getProcessId());
         }
     }
@@ -247,7 +253,7 @@ public class AdvanceRuntimeDataServiceImplTest extends AbstractKieServicesBaseTe
         }
         List<String> values = Arrays.asList("a1", "a2");
         for (ProcessInstanceWithVarsDesc p : data) {
-            Assert.assertTrue(!values.contains(p.getVariables().get("var_a")));
+            assertTrue(!values.contains(p.getVariables().get("var_a")));
             Assert.assertEquals("test.test_A", p.getProcessId());
         }
     }
@@ -314,7 +320,7 @@ public class AdvanceRuntimeDataServiceImplTest extends AbstractKieServicesBaseTe
         }
 
         for (UserTaskInstanceWithPotOwnerDesc p : data) {
-            Assert.assertTrue(p.getPotentialOwners().contains("katy"));
+            assertTrue(p.getPotentialOwners().contains("katy"));
         }
     }
 
@@ -353,6 +359,65 @@ public class AdvanceRuntimeDataServiceImplTest extends AbstractKieServicesBaseTe
         List<QueryParam> attributes = list(equalsTo(TASK_ATTR_OWNER, "Error"));
         List<UserTaskInstanceWithPotOwnerDesc> data = advanceVariableDataService.queryUserTasksByVariables(attributes, emptyList(), emptyList(), emptyList(), queryContext);
         Assert.assertThat(data.size(), is(0));
+    }
+
+    @Test
+    public void testQueryTaskByStatus() {
+        List<QueryParam> attributes = list(in(AdvanceRuntimeDataService.TASK_ATTR_STATUS,
+                                              Arrays.asList("Ready")));
+
+        List<UserTaskInstanceWithPotOwnerDesc> data = advanceVariableDataService.queryUserTasksByVariables(attributes, emptyList(), emptyList(), emptyList(), queryContext);
+        if (queryContext.getCount() > 0) {
+            Assert.assertThat(data.size(), is(queryContext.getCount()));
+        } else {
+            Assert.assertThat(data.size(), is(20));
+        }
+
+        long[] taskIds = data.stream().mapToLong(UserTaskInstanceWithPotOwnerDesc::getTaskId).toArray();
+        for (long taskId : taskIds) {
+            UserTaskInstanceDesc task = runtimeDataService.getTaskById(taskId);
+            assertThat(task.getStatus(), is("Ready"));
+        }
+    }
+
+    @Test
+    public void testQueryTaskByNotStatus() {
+        List<QueryParam> attributes = list(in(AdvanceRuntimeDataService.TASK_ATTR_STATUS,
+                                              Arrays.asList("Created")));
+
+        List<UserTaskInstanceWithPotOwnerDesc> data = advanceVariableDataService.queryUserTasksByVariables(attributes, emptyList(), emptyList(), emptyList(), queryContext);
+        Assert.assertThat(data.size(), is(0));
+    }
+
+    @Test
+    public void testQueryAllNull() {
+        List<UserTaskInstanceWithPotOwnerDesc> data = advanceVariableDataService.queryUserTasksByVariables(null, null, null, null, queryContext);
+        if (queryContext.getCount() > 0) {
+            Assert.assertThat(data.size(), is(queryContext.getCount()));
+        } else {
+            Assert.assertThat(data.size(), is(20));
+        }
+    }
+
+    @Test
+    public void testQueryTaskByVariablesWithMultipleExpressionsPerVariable() {
+        List<QueryParam> processVariables = list(notEqualsTo("var_a", "a1"), isNotNull("var_a"));
+        List<QueryParam> variables = list(notEqualsTo("task_in_a1", "a0"), isNotNull("task_in_a1"));
+
+        List<String> potOwners = Collections.emptyList();
+        List<UserTaskInstanceWithPotOwnerDesc> data = advanceVariableDataService.queryUserTasksByVariables(emptyList(), variables, processVariables, potOwners, queryContext);
+        if (queryContext.getCount() > 0) {
+            Assert.assertThat(data.size(), is(queryContext.getCount()));
+        } else {
+            Assert.assertThat(data.size(), is(3));
+        }
+        for (UserTaskInstanceWithPotOwnerDesc userTask : data) {
+            assertThat(userTask.getProcessVariables().get("var_a"), notNullValue());
+            assertThat(userTask.getProcessVariables().get("var_a"), is(not("a1")));
+
+            assertThat(userTask.getInputdata().get("task_in_a1"), notNullValue());
+            assertThat(userTask.getInputdata().get("task_in_a1"), is(not("a0")));
+        }
     }
 
 }
