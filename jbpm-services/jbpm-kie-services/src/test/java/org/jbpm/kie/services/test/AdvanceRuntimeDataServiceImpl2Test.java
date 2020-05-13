@@ -48,7 +48,9 @@ import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.is;
 import static org.jbpm.services.api.AdvanceRuntimeDataService.TASK_ATTR_NAME;
+import static org.jbpm.services.api.query.model.QueryParam.notEqualsTo;
 import static org.jbpm.services.api.query.model.QueryParam.equalsTo;
+import static org.jbpm.services.api.query.model.QueryParam.isNotNull;
 import static org.jbpm.services.api.query.model.QueryParam.list;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -63,6 +65,11 @@ public class AdvanceRuntimeDataServiceImpl2Test extends AbstractKieServicesBaseT
 
     private List<Long> processIds;
     private KModuleDeploymentUnit deploymentUnit = null;
+    
+    private List<QueryParam> attributes;
+    private List<QueryParam> processVariables;
+    private List<QueryParam> taskVariables;
+    private List<String> potOwners;
 
 
     @Before
@@ -99,7 +106,7 @@ public class AdvanceRuntimeDataServiceImpl2Test extends AbstractKieServicesBaseT
         processIds = new ArrayList<>();
 
         Map<String, Object> inputsA1 = new HashMap<>();
-        inputsA1.put("var_a", "myvalue");
+        inputsA1.put("var_a", "somethingelse");
         inputsA1.put("var_b", "othervalue");
         processIds.add(processService.startProcess(deploymentUnit.getIdentifier(), "test.test_A", inputsA1));
 
@@ -113,6 +120,12 @@ public class AdvanceRuntimeDataServiceImpl2Test extends AbstractKieServicesBaseT
         inputsC1.put("var_b", "b_var");
         processIds.add(processService.startProcess(deploymentUnit.getIdentifier(), "test.test_C", inputsC1));
 
+        completeTasks();
+        
+        attributes = Collections.emptyList();
+        processVariables = Collections.emptyList();
+        taskVariables = Collections.emptyList();
+        potOwners = Collections.emptyList();
     }
 
     @After
@@ -144,8 +157,141 @@ public class AdvanceRuntimeDataServiceImpl2Test extends AbstractKieServicesBaseT
 
     @Test
     public void testQueryProcessTaskByVariablesWithOwners() {
+        attributes = list(equalsTo(TASK_ATTR_NAME, "CustomTask"));
+        processVariables = list(equalsTo("var_b", "3"));
+        taskVariables = list(equalsTo("task_in_a1", "somethingelse"));
+        potOwners = Collections.singletonList("kieserver");
 
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(1));
+        assertThat(data.get(0).getVariables().get("var_b"), is("3"));
 
+        List<Long> taksIds = data.stream().map(ProcessInstanceWithVarsDesc::getId).map(id -> runtimeDataService.getTasksByProcessInstanceId(id)).flatMap(List::stream).collect(toList());
+        for (Long taskId : taksIds) {
+            UserTaskInstanceDesc userTask = runtimeDataService.getTaskById(taskId);
+            assertThat(userTask.getName(), is("CustomTask"));
+        }
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_NullAttributes() {
+        attributes = null;
+        processVariables = list(equalsTo("var_b", "3"));
+        taskVariables = list(equalsTo("task_in_a1", "somethingelse"));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(2));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_NullProcessVariables() {
+        processVariables = null;
+        taskVariables = list(equalsTo("task_in_a1", "somethingelse"));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(2));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_NullTaskVariables() {
+        taskVariables = null;
+        potOwners = Collections.singletonList("kieserver");
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(2));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_NullPotOwners() {
+        taskVariables = list(equalsTo("task_in_a1", "somethingelse"));
+        potOwners = null;
+
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(2));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_EmptyPotOwners() {
+        taskVariables = list(equalsTo("task_in_a1", "somethingelse"));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(2));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_Pagination() {
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext(0,1));
+        assertThat(data.size(), is(1));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_MultipleProcessVariablesRepeated() {
+        processVariables = list(equalsTo("var_b", "3"), equalsTo("var_c", "somethingelse"), isNotNull("var_c"));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(1));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_MultipleProcessVariablesRepeatedBis() {
+        processVariables = list(equalsTo("var_b", "3"), notEqualsTo("var_c","fake"), isNotNull("var_c"));
+        //
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(1));
+        System.out.println("@@ pr:"+data.get(0).getProcessId());
+        System.out.println("@@ var_c:"+data.get(0).getVariables().get("var_c"));
+        System.out.println("@@ var_b:"+data.get(0).getVariables().get("var_b"));
+    }
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_MultipleProcessVariablesRepeated3() {
+        processVariables = list(equalsTo("var_b", "3"), equalsTo("var_c","somethingelse"), isNotNull("var_c"));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(1));
+        
+        System.out.println("@@ pr:"+data.get(0).getProcessId());
+        System.out.println("@@ var_c:"+data.get(0).getVariables().get("var_c"));
+        System.out.println("@@ var_b:"+data.get(0).getVariables().get("var_b"));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_MultipleTasksVariablesRepeated() {
+        taskVariables = list(equalsTo("task_in_a2", "b_var"), equalsTo("task_in_a1", "somethingelse")
+                             , isNotNull("task_in_a1"));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(1));
+        
+        System.out.println("@@ pr:"+data.get(0).getProcessId());
+        //System.out.println("@@ pr:"+data.get(1).getProcessId());
+        
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_ProcessVariablesNotNull() {
+        processVariables = list(equalsTo("var_b", "3"), isNotNull("var_a"));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(1));
+    }
+    
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_ProcessVariableIsEmpty() {
+        processVariables = list(equalsTo("var_b", ""));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(1));
+    }
+
+    @Test
+    public void testQueryProcessTaskByVariablesWithOwners_ProcessVariableNotEqualsTo() {
+        processVariables = list(notEqualsTo("var_b", "3"));
+        
+        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
+        assertThat(data.size(), is(1));
+    }
+    
+    private void completeTasks() {
         List<UserTaskInstanceWithPotOwnerDesc> userTasks = advanceVariableDataService.queryUserTasksByVariables(emptyList(), emptyList(), emptyList(), emptyList(), new QueryContext());
 
         for (UserTaskInstanceWithPotOwnerDesc userTask : userTasks) {
@@ -159,21 +305,5 @@ public class AdvanceRuntimeDataServiceImpl2Test extends AbstractKieServicesBaseT
             userTaskService.saveContentFromUser(taskId, user, output);
             userTaskService.complete(taskId, user, output);
         }
-
-        List<QueryParam> attributes = list(equalsTo(TASK_ATTR_NAME, "CustomTask"));
-        List<QueryParam> processVariables = list(equalsTo("var_b", "3"));
-        List<QueryParam> taskVariables = list(equalsTo("task_in_a1", "somethingelse"));
-        List<String> potOwners = Collections.singletonList("kieserver");
-
-        List<ProcessInstanceWithVarsDesc> data = advanceVariableDataService.queryProcessByVariablesAndTask(attributes, processVariables, taskVariables, potOwners, new QueryContext());
-        assertThat(data.size(), is(1));
-        assertThat(data.get(0).getVariables().get("var_b"), is("3"));
-
-        List<Long> taksIds = data.stream().map(ProcessInstanceWithVarsDesc::getId).map(id -> runtimeDataService.getTasksByProcessInstanceId(id)).flatMap(List::stream).collect(toList());
-        for (Long taskId : taksIds) {
-            UserTaskInstanceDesc userTask = runtimeDataService.getTaskById(taskId);
-            assertThat(userTask.getName(), is("CustomTask"));
-        }
     }
-
 }
