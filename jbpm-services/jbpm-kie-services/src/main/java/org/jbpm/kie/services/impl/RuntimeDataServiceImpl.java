@@ -42,6 +42,7 @@ import org.jbpm.kie.services.impl.security.DeploymentRolesManager;
 import org.jbpm.runtime.manager.impl.identity.UserDataServiceProvider;
 import org.jbpm.services.api.DeploymentEvent;
 import org.jbpm.services.api.DeploymentEventListener;
+import org.jbpm.services.api.DeploymentNotFoundException;
 import org.jbpm.services.api.RuntimeDataService;
 import org.jbpm.services.api.TaskNotFoundException;
 import org.jbpm.services.api.model.DeployedAsset;
@@ -152,6 +153,9 @@ public class RuntimeDataServiceImpl implements RuntimeDataService, DeploymentEve
         String matched = deploymentId;
         if (deploymentId != null && deploymentId.toLowerCase().endsWith("latest")) {
             matched = DeploymentIdResolver.matchAndReturnLatest(deploymentId, deploymentIds);
+        }
+        else if (!deploymentIds.contains(deploymentId)) {
+            throw new DeploymentNotFoundException(deploymentId+ " not found");
         }
         return matched;
     }
