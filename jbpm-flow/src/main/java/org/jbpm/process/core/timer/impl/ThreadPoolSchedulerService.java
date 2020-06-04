@@ -37,7 +37,6 @@ import org.jbpm.process.core.timer.NamedJobContext;
 import org.jbpm.process.core.timer.SchedulerServiceInterceptor;
 import org.jbpm.process.core.timer.impl.GlobalTimerService.GlobalJobHandle;
 import org.jbpm.process.instance.timer.TimerManager.ProcessJobContext;
-import org.jbpm.process.instance.timer.TimerManager.StartProcessJobContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,18 +92,11 @@ public class ThreadPoolSchedulerService implements GlobalSchedulerService {
 
         Date date = trigger.hasNextFireTime();
         if ( date != null ) {
-            String jobname = null;
-            if (ctx instanceof ProcessJobContext) {
-                ProcessJobContext processCtx = (ProcessJobContext) ctx;
-                jobname = processCtx.getSessionId() + "-" + processCtx.getProcessInstanceId() + "-" + processCtx.getTimer().getId();
-                if (processCtx instanceof StartProcessJobContext) {
-                    jobname = "StartProcess-"+((StartProcessJobContext) processCtx).getProcessId()+ "-" + processCtx.getTimer().getId();
-                }
-                if (activeTimer.containsKey(jobname)) {
-                    return activeTimer.get(jobname);
-                }
-            
+            String jobname = QuartzNameHelper.getJobName(ctx);
+            if (activeTimer.containsKey(jobname)) {
+                return activeTimer.get(jobname);
             }
+            
             GlobalJDKJobHandle jobHandle = new GlobalJDKJobHandle( idCounter.getAndIncrement() );
             
             TimerJobInstance jobInstance = globalTimerService.
@@ -139,11 +131,7 @@ public class ThreadPoolSchedulerService implements GlobalSchedulerService {
             } else {
                 processCtx = (ProcessJobContext) jobContext;
             }
-            
-            String jobname = processCtx.getSessionId() + "-" + processCtx.getProcessInstanceId() + "-" + processCtx.getTimer().getId();
-            if (processCtx instanceof StartProcessJobContext) {
-                jobname = "StartProcess-"+((StartProcessJobContext) processCtx).getProcessId()+ "-" + processCtx.getTimer().getId();
-            }
+            String jobname = QuartzNameHelper.getJobName(processCtx);
             activeTimer.remove(jobname);
             globalTimerService.getTimerJobFactoryManager().removeTimerJobInstance( ((GlobalJDKJobHandle) jobHandle).getTimerJobInstance() );
         } catch (ClassCastException e) {

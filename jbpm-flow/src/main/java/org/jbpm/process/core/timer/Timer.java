@@ -32,7 +32,16 @@ public class Timer implements Serializable {
     private String period;
     private String date;
     private int timeType;
+    private String name;
     
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public long getId() {
         return id;
     }

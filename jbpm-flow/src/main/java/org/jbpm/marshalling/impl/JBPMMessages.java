@@ -24302,6 +24302,23 @@ public final class JBPMMessages {
         return repeatLimit_;
       }
 
+      public static final int NAME_FIELD_NUMBER = 11;
+      private String name_;
+
+      /**
+       * <code>optional int32 repeatLimit = 10;</code>
+       */
+      public boolean hasName() {
+          return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+
+      /**
+       * <code>optional int32 repeatLimit = 10;</code>
+       */
+      public String getName() {
+          return name_;
+      }
+
       private byte memoizedIsInitialized = -1;
       @java.lang.Override
       public final boolean isInitialized() {
@@ -24345,6 +24362,9 @@ public final class JBPMMessages {
         }
         if (((bitField0_ & 0x00000200) == 0x00000200)) {
           output.writeInt32(10, repeatLimit_);
+        }
+        if (((bitField0_ & 0x00000400) == 0x00000400)) {
+            output.writeString(11, name_);
         }
         unknownFields.writeTo(output);
       }
@@ -24394,6 +24414,9 @@ public final class JBPMMessages {
         if (((bitField0_ & 0x00000200) == 0x00000200)) {
           size += com.google.protobuf.CodedOutputStream
             .computeInt32Size(10, repeatLimit_);
+        }
+        if (((bitField0_ & 0x00000400) == 0x00000400)) {
+            size += com.google.protobuf.CodedOutputStream.computeStringSize(11, name_);
         }
         size += unknownFields.getSerializedSize();
         memoizedSize = size;
@@ -24461,6 +24484,11 @@ public final class JBPMMessages {
           result = result && (getRepeatLimit()
               == other.getRepeatLimit());
         }
+        result = result && (hasName() == other.hasName());
+        if (hasRepeatLimit()) {
+            result = result && (getName().equals(
+                                                 other.getName()));
+        }
         result = result && unknownFields.equals(other.unknownFields);
         return result;
       }
@@ -24519,6 +24547,10 @@ public final class JBPMMessages {
         if (hasRepeatLimit()) {
           hash = (37 * hash) + REPEATLIMIT_FIELD_NUMBER;
           hash = (53 * hash) + getRepeatLimit();
+        }
+        if (hasName()) {
+            hash = (37 * hash) + NAME_FIELD_NUMBER;
+            hash = (53 * hash) + getName().hashCode();
         }
         hash = (29 * hash) + unknownFields.hashCode();
         memoizedHashCode = hash;
@@ -24673,6 +24705,8 @@ public final class JBPMMessages {
           bitField0_ = (bitField0_ & ~0x00000100);
           repeatLimit_ = 0;
           bitField0_ = (bitField0_ & ~0x00000200);
+          name_ = null;
+          bitField0_ = (bitField0_ & ~0x00000400);
           return this;
         }
 
@@ -24741,6 +24775,12 @@ public final class JBPMMessages {
             to_bitField0_ |= 0x00000200;
           }
           result.repeatLimit_ = repeatLimit_;
+
+          if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+              to_bitField0_ |= 0x00000400;
+          }
+          result.name_ = name_;
+
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -24820,6 +24860,10 @@ public final class JBPMMessages {
           if (other.hasRepeatLimit()) {
             setRepeatLimit(other.getRepeatLimit());
           }
+          if (other.hasName()) {
+              setName(other.getName());
+          }
+
           this.mergeUnknownFields(other.unknownFields);
           onChanged();
           return this;
@@ -25138,6 +25182,7 @@ public final class JBPMMessages {
           return this;
         }
 
+
         private int repeatLimit_ ;
         /**
          * <code>optional int32 repeatLimit = 10;</code>
@@ -25169,6 +25214,31 @@ public final class JBPMMessages {
           onChanged();
           return this;
         }
+
+        private String name_;
+
+        public boolean hasName() {
+            return ((bitField0_ & 0x00000400) == 0x00000400);
+        }
+
+        public String getName() {
+            return name_;
+        }
+
+        public Builder setName(String value) {
+            bitField0_ |= 0x00000400;
+            name_ = value;
+            onChanged();
+            return this;
+        }
+
+        public Builder clearName() {
+            bitField0_ = (bitField0_ & ~0x00000400);
+            name_ = null;
+            onChanged();
+            return this;
+        }
+
         @java.lang.Override
         public final Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -27836,7 +27906,7 @@ public final class JBPMMessages {
     internal_static_org_jbpm_marshalling_ProcessTimer_TimerInstance_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_org_jbpm_marshalling_ProcessTimer_TimerInstance_descriptor,
-        new java.lang.String[] { "Id", "TimerId", "Delay", "Period", "ProcessInstanceId", "ActivatedTime", "LastTriggered", "DEPRECATEDSessionId", "SessionId", "RepeatLimit", });
+        new java.lang.String[] { "Id", "TimerId", "Delay", "Period", "ProcessInstanceId", "ActivatedTime", "LastTriggered", "DEPRECATEDSessionId", "SessionId", "RepeatLimit", "Name" });
     internal_static_org_jbpm_marshalling_IterationLevel_descriptor =
       getDescriptor().getMessageTypes().get(4);
     internal_static_org_jbpm_marshalling_IterationLevel_fieldAccessorTable = new
