@@ -24043,6 +24043,7 @@ public final class JBPMMessages {
         dEPRECATEDSessionId_ = 0;
         sessionId_ = 0L;
         repeatLimit_ = 0;
+        name_ = "";
       }
 
       @java.lang.Override
@@ -24117,6 +24118,11 @@ public final class JBPMMessages {
               case 80: {
                 bitField0_ |= 0x00000200;
                 repeatLimit_ = input.readInt32();
+                break;
+              }
+              case 90: {
+                bitField0_ |= 0x00000400;
+                name_ = input.readString();
                 break;
               }
               default: {
@@ -24303,17 +24309,17 @@ public final class JBPMMessages {
       }
 
       public static final int NAME_FIELD_NUMBER = 11;
-      private String name_;
+      private String name_ = "";
 
       /**
-       * <code>optional int32 repeatLimit = 10;</code>
+       * <code>optional String name = 11;</code>
        */
       public boolean hasName() {
           return ((bitField0_ & 0x00000400) == 0x00000400);
       }
 
       /**
-       * <code>optional int32 repeatLimit = 10;</code>
+       * <code>optional String name = 11;</code>
        */
       public String getName() {
           return name_;
@@ -24364,7 +24370,7 @@ public final class JBPMMessages {
           output.writeInt32(10, repeatLimit_);
         }
         if (((bitField0_ & 0x00000400) == 0x00000400)) {
-            output.writeString(11, name_);
+            com.google.protobuf.GeneratedMessageV3.writeString(output, 11, name_);
         }
         unknownFields.writeTo(output);
       }
@@ -24416,7 +24422,7 @@ public final class JBPMMessages {
             .computeInt32Size(10, repeatLimit_);
         }
         if (((bitField0_ & 0x00000400) == 0x00000400)) {
-            size += com.google.protobuf.CodedOutputStream.computeStringSize(11, name_);
+            size += com.google.protobuf.GeneratedMessageV3.computeStringSize(11, name_);
         }
         size += unknownFields.getSerializedSize();
         memoizedSize = size;
@@ -24485,7 +24491,7 @@ public final class JBPMMessages {
               == other.getRepeatLimit());
         }
         result = result && (hasName() == other.hasName());
-        if (hasRepeatLimit()) {
+        if (hasName()) {
             result = result && (getName().equals(
                                                  other.getName()));
         }
@@ -24705,7 +24711,7 @@ public final class JBPMMessages {
           bitField0_ = (bitField0_ & ~0x00000100);
           repeatLimit_ = 0;
           bitField0_ = (bitField0_ & ~0x00000200);
-          name_ = null;
+          name_ = "";
           bitField0_ = (bitField0_ & ~0x00000400);
           return this;
         }
@@ -25215,7 +25221,7 @@ public final class JBPMMessages {
           return this;
         }
 
-        private String name_;
+        private String name_ = "";
 
         public boolean hasName() {
             return ((bitField0_ & 0x00000400) == 0x00000400);
@@ -25227,14 +25233,14 @@ public final class JBPMMessages {
 
         public Builder setName(String value) {
             bitField0_ |= 0x00000400;
-            name_ = value;
+            name_ = value==null ? "" : value;
             onChanged();
             return this;
         }
 
         public Builder clearName() {
             bitField0_ = (bitField0_ & ~0x00000400);
-            name_ = null;
+            name_ = "";
             onChanged();
             return this;
         }
