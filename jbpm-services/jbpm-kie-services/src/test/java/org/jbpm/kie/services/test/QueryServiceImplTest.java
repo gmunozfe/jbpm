@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.dashbuilder.DataSetCore;
-import org.dashbuilder.dataset.def.DataSetDef;
 import org.dashbuilder.dataset.def.SQLDataSetDef;
 import org.drools.compiler.kie.builder.impl.InternalKieModule;
 import org.jbpm.kie.services.impl.KModuleDeploymentUnit;
@@ -457,8 +456,7 @@ public class QueryServiceImplTest extends AbstractKieServicesBaseTest {
         assertNotNull(processInstanceId);
 
         List<UserTaskInstanceDesc> taskInstanceLogs = queryService.query(query.getName(), UserTaskInstanceQueryMapper.get(), new QueryContext());
-        assertNotNull(taskInstanceLogs);
-        assertEquals(1, taskInstanceLogs.size());
+        assertTasksDesc(taskInstanceLogs, 1, processInstanceId);
 
         processService.abortProcessInstance(processInstanceId);
         processInstanceId = null;
@@ -538,8 +536,7 @@ public class QueryServiceImplTest extends AbstractKieServicesBaseTest {
         userGroupCallback.setUserGroups(identityProvider.getName(), emptyList());
 
         List<UserTaskInstanceDesc> taskInstanceLogs = queryService.query(query.getName(), UserTaskInstanceQueryMapper.get(), new QueryContext());
-        assertNotNull(taskInstanceLogs);
-        assertEquals(0, taskInstanceLogs.size());
+        assertTasksDesc(taskInstanceLogs, 1, processInstanceId);
 
         identityProvider.setName("salaboy");
         identityProvider.setRoles(emptyList());
@@ -595,8 +592,7 @@ public class QueryServiceImplTest extends AbstractKieServicesBaseTest {
         userGroupCallback.setUserGroups(potentialOwner, roles);
 
         List<UserTaskInstanceDesc> taskInstanceLogs = queryService.query(query.getName(), UserTaskInstanceQueryMapper.get(), new QueryContext());
-        assertNotNull(taskInstanceLogs);
-        assertEquals(1, taskInstanceLogs.size());
+        assertTasksDesc(taskInstanceLogs, 1, processInstanceId);
 
         identityProvider.setName(excludedOwner);
         identityProvider.setRoles(emptyList());
@@ -649,8 +645,7 @@ public class QueryServiceImplTest extends AbstractKieServicesBaseTest {
         assertNotNull(processInstanceId);
 
         List<UserTaskInstanceDesc> taskInstanceLogs = queryService.query(query.getName(), UserTaskInstanceQueryMapper.get(), new QueryContext(), QueryParam.groupBy(COLUMN_TASKID));
-        assertNotNull(taskInstanceLogs);
-        assertEquals(0, taskInstanceLogs.size());
+        assertTasksDesc(taskInstanceLogs, 1, processInstanceId);
 
         identityProvider.setName("Administrator");
         identityProvider.setRoles(emptyList());
@@ -1101,12 +1096,10 @@ public class QueryServiceImplTest extends AbstractKieServicesBaseTest {
         userGroupCallback.setUserGroups(identityProvider.getName(), roles);
 
         List<UserTaskInstanceDesc> taskInstanceLogs = queryService.query(query.getName(), UserTaskInstanceQueryMapper.get(), new QueryContext());
-        assertNotNull(taskInstanceLogs);
-        assertEquals(1, taskInstanceLogs.size());
+        assertTasksDesc(taskInstanceLogs, 1, processInstanceId);
 
         List<TaskSummary> taskSummaries = queryService.query(query.getName(), TaskSummaryQueryMapper.get(), new QueryContext());
-        assertNotNull(taskSummaries);
-        assertEquals(1, taskSummaries.size());
+        assertTasksSummary(taskSummaries, 1, processInstanceId);
 
         // let's now change the roles so user should not see instances
         roles.clear();
@@ -1170,12 +1163,12 @@ public class QueryServiceImplTest extends AbstractKieServicesBaseTest {
         identityProvider.setRoles(roles);
         userGroupCallback.setUserGroups(identityProvider.getName(), emptyList());
         taskInstanceLogs = queryService.query(query.getName(), UserTaskInstanceQueryMapper.get(), new QueryContext(), QueryParam.groupBy(COLUMN_TASKID));
-        assertNotNull(taskInstanceLogs);
-        assertEquals(1, taskInstanceLogs.size());
+        assertTasksDesc(taskInstanceLogs, 1, processInstanceId);
 
         processService.abortProcessInstance(processInstanceId);
         processInstanceId = null;
     }
+
 
     /*
      * JBPM-5468 adding support for full ORDER BY clause with QueryService.  This test

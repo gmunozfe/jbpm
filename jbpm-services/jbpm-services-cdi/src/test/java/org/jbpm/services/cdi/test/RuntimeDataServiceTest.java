@@ -15,9 +15,6 @@
  */
 package org.jbpm.services.cdi.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,6 +39,7 @@ import org.jbpm.runtime.manager.util.TestUtil;
 import org.jbpm.services.api.RuntimeDataService;
 import org.jbpm.services.api.model.NodeInstanceDesc;
 import org.jbpm.services.cdi.impl.manager.InjectableRegisterableItemsFactory;
+import org.jbpm.workflow.core.WorkflowProcess;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,6 +57,9 @@ import org.kie.api.task.model.TaskSummary;
 import org.kie.internal.io.ResourceFactory;
 import org.kie.internal.query.QueryFilter;
 import org.kie.internal.runtime.manager.context.EmptyContext;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 
 @RunWith(Arquillian.class)
@@ -266,7 +267,9 @@ public class RuntimeDataServiceTest extends AbstractKieServicesBaseTest {
         List<TaskSummary> tasks = runtimeDataService.getTasksAssignedAsPotentialOwnerByStatus("katy", statuses, new QueryFilter());
         assertNotNull(tasks);
         assertEquals(1, tasks.size());
-        
+        TaskSummary task = tasks.get(0);
+        assertEquals(WorkflowProcess.PROCESS_TYPE, task.getProcessType().intValue());
+        assertEquals(Long.toString(processInstance.getId()), task.getCorrelationKey());
         ksession.abortProcessInstance(processInstance.getId());
         
     }
