@@ -448,10 +448,9 @@
             from
             TaskImpl t
             inner join ProcessInstanceLog plog ON t.taskData.processInstanceId = plog.processInstanceId
-            inner join ProcessInstanceLog plog ON t.taskData.processInstanceId = plog.processInstanceId
             join t.peopleAssignments.businessAdministrators businessAdministrators
             where
-            log.correlationKey like :caseId and 
+            plog.correlationKey like :caseId and 
             t.archived = 0 and
             ( businessAdministrators.id = :userId or businessAdministrators.id in (:groupIds) ) and 
             t.taskData.status in (:status) 
