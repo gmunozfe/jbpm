@@ -20,8 +20,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.drools.compiler.kie.builder.impl.InternalKieModule;
 import org.jbpm.kie.services.impl.KModuleDeploymentUnit;
@@ -43,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
+import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -67,6 +71,8 @@ public class StartProcessFromArbitraryNodesServiceImplTest extends AbstractKieSe
         processes.add("repo/processes/general/BPMN2-SimpleRestartWithObsoleteTest.bpmn2");
         processes.add("repo/processes/general/BPMN2-SimpleRestartWithErrorOnEntryScriptHT.bpmn2");
         processes.add("repo/processes/general/BPMN2-SimpleRestartWithErrorOnExitScriptHT.bpmn2");
+        processes.add("repo/processes/general/BPMN2-SimpleRestartParallel.bpmn2");
+        processes.add("repo/processes/general/BPMN2-SimpleRestartSignal.bpmn2");
 
         InternalKieModule kJar1 = createKieJar(ks, releaseId, processes);
         File pom = new File("target/kmodule", "pom.xml");
@@ -117,11 +123,7 @@ public class StartProcessFromArbitraryNodesServiceImplTest extends AbstractKieSe
     public void testStartProcessFromNodeIds() {
         assertNotNull(deploymentService);
 
-        KModuleDeploymentUnit deploymentUnit = new KModuleDeploymentUnit(GROUP_ID, ARTIFACT_ID, VERSION);
-
-        deploymentService.deploy(deploymentUnit);
-        units.add(deploymentUnit);
-        assertNotNull(processService);
+        KModuleDeploymentUnit deploymentUnit = deployUnit();
 
         Long processInstanceId = processService.startProcess(deploymentUnit.getIdentifier(), "restart.simple", singletonMap("var_a", 3));
         assertNotNull(processInstanceId);
@@ -199,16 +201,9 @@ public class StartProcessFromArbitraryNodesServiceImplTest extends AbstractKieSe
         units.add(deploymentUnit);
         assertNotNull(processService);
 
-        Long processInstanceId = processService.startProcess(deploymentUnit.getIdentifier(), processId, singletonMap("var_a", 3));
-        assertNotNull(processInstanceId);
+        String[] nodeIds = startAndAbortProcess(processId, deploymentUnit, singletonMap("var_a", 3), 2);
 
-        processService.abortProcessInstance(processInstanceId);
-
-        Collection<NodeInstanceDesc> aborted = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.ABORTED, new QueryContext(0, 0));
-        assertThat(aborted.size(), is(2));
-        String[] nodeIds = aborted.stream().map(e -> e.getNodeId()).toArray(String[]::new);
-
-        processInstanceId = processService.startProcessFromNodeIds(deploymentUnit.getIdentifier(), processId, singletonMap("var_a", 3), nodeIds);
+        Long processInstanceId = processService.startProcessFromNodeIds(deploymentUnit.getIdentifier(), processId, singletonMap("var_a", 3), nodeIds);
         runtimeDataService.getTasksByProcessInstanceId(processInstanceId).forEach(e -> {
             Task task = this.userTaskService.getTask(e);
             if (task.getName().equals("First Task")) {
@@ -300,6 +295,161 @@ public class StartProcessFromArbitraryNodesServiceImplTest extends AbstractKieSe
         
         ProcessInstance pi = processService.getProcessInstance(processInstanceId);
         assertNull(pi);
+    }
+    
+    @Test
+    public void testParallelRestartSkippingHumanTask() throws Exception {
+        final String processId = "restart.simpleParallel";
+        
+        KModuleDeploymentUnit deploymentUnit = deployUnit();
+
+        String[] nodeIds = startAndAbortProcess(processId, deploymentUnit, Collections.emptyMap(), 2);
+        
+        Long processInstanceId = processService.startProcessFromNodeIds(deploymentUnit.getIdentifier(), processId, singletonMap("var_signal", "true"), nodeIds);
+        
+        ProcessInstance pi = processService.getProcessInstance(processInstanceId);
+        assertNull(pi);
+        
+        Collection<NodeInstanceDesc> end = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.END, new QueryContext(0, 0));
+        assertThat("Four nodes should have ended", end.size(), is(4));
+
+        Collection<NodeInstanceDesc> obsolete = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.OBSOLETE, new QueryContext(0, 0));
+        assertThat("One node should have remained obsolete", obsolete.size(), is(1));
+        assertThat("User Task 1 is the obsolete node", obsolete.iterator().next().getName(), is("User Task 1"));
+    }
+    
+    @Test
+    public void testParallelRestartExecutingHumanTask() throws Exception {
+        final String processId = "restart.simpleParallel";
+        
+        KModuleDeploymentUnit deploymentUnit = deployUnit();
+
+        String[] nodeIds = startAndAbortProcess(processId, deploymentUnit, Collections.emptyMap(), 2);
+        
+        Long processInstanceId = processService.startProcessFromNodeIds(deploymentUnit.getIdentifier(), processId, Collections.emptyMap(), nodeIds);
+        
+        runtimeDataService.getTasksByProcessInstanceId(processInstanceId).forEach(e -> {
+            Task task = this.userTaskService.getTask(e);
+            if (task.getName().equals("User Task 1")) {
+                this.userTaskService.start(e, "katy");
+                this.userTaskService.complete(e, "katy", emptyMap());
+            }
+        });
+        
+        ProcessInstance pi = processService.getProcessInstance(processInstanceId);
+        assertNull(pi);
+        
+        Collection<NodeInstanceDesc> end = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.END, new QueryContext(0, 0));
+        assertThat("Four nodes should have ended", end.size(), is(4));
+
+        Collection<NodeInstanceDesc> obsolete = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.OBSOLETE, new QueryContext(0, 0));
+        assertThat("One node should have remained obsolete", obsolete.size(), is(1));
+        assertThat("Intermediate Catch Event 1 is the obsolete node", obsolete.iterator().next().getName(), is("Intermediate Catch Event 1"));
+    }
+    
+    @Test
+    public void testSignalRestartSkippingHumanTask() throws Exception {
+        final String processId = "restart.simpleSignal";
+        
+        KModuleDeploymentUnit deploymentUnit = deployUnit();
+
+        String[] nodeIds = startAndAbortProcess(processId, deploymentUnit, Collections.emptyMap(), 1);
+        
+        Long processInstanceId = processService.startProcessFromNodeIds(deploymentUnit.getIdentifier(), processId, singletonMap("var_signal", "true"), nodeIds);
+        
+        ProcessInstance pi = processService.getProcessInstance(processInstanceId);
+        assertNull(pi);
+        
+        Collection<NodeInstanceDesc> end = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.END, new QueryContext(0, 0));
+        assertThat("Four nodes should have ended", end.size(), is(4));
+        List<String> endNodes = end.stream().map(e -> e.getNodeId()).collect(Collectors.toCollection(ArrayList::new));
+        assertThat(endNodes, hasItems("EndEvent_2", "ScriptTask_1", "ExclusiveGateway_2", "BoundaryEvent_1"));
+
+        Collection<NodeInstanceDesc> obsolete = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.OBSOLETE, new QueryContext(0, 0));
+        assertThat("No obsolete nodes", obsolete.size(), is(0));
+        
+        Collection<NodeInstanceDesc> skipped = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.SKIPPED, new QueryContext(0, 0));
+        assertThat("User Task 1 is the skipped node", skipped.iterator().next().getName(), is("User Task 1"));
+    }
+    
+    @Test
+    public void testSignalRestartExecutingHumanTask() throws Exception {
+        final String processId = "restart.simpleSignal";
+        
+        KModuleDeploymentUnit deploymentUnit = deployUnit();
+
+        String[] nodeIds = startAndAbortProcess(processId, deploymentUnit, Collections.emptyMap(), 1);
+        
+        Long processInstanceId = processService.startProcessFromNodeIds(deploymentUnit.getIdentifier(), processId, Collections.emptyMap(), nodeIds);
+        
+        runtimeDataService.getTasksByProcessInstanceId(processInstanceId).forEach(e -> {
+            Task task = this.userTaskService.getTask(e);
+            if (task.getName().equals("User Task 1")) {
+                this.userTaskService.start(e, "katy");
+                this.userTaskService.complete(e, "katy", emptyMap());
+            }
+        });
+        
+        ProcessInstance pi = processService.getProcessInstance(processInstanceId);
+        assertNull(pi);
+        
+        Collection<NodeInstanceDesc> end = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.END, new QueryContext(0, 0));
+        assertThat("Four nodes should have ended", end.size(), is(4));
+        List<String> endNodes = end.stream().map(e -> e.getNodeId()).collect(Collectors.toCollection(ArrayList::new));
+        assertThat(endNodes, hasItems("EndEvent_2", "ScriptTask_1", "ExclusiveGateway_2", "UserTask_1"));
+
+        Collection<NodeInstanceDesc> obsolete = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.OBSOLETE, new QueryContext(0, 0));
+        assertThat("No obsolete nodes", obsolete.size(), is(0));
+        
+        Collection<NodeInstanceDesc> skipped = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.SKIPPED, new QueryContext(0, 0));
+        assertThat("No skipped nodes", skipped.size(), is(0));
+    }
+    
+    @Test
+    public void testRestartFromNewNode() throws Exception {
+        final String processId = "restart.simpleSignal";
+        
+        KModuleDeploymentUnit deploymentUnit = deployUnit();
+
+        startAndAbortProcess(processId, deploymentUnit, Collections.emptyMap(), 1);
+        
+        String[] nodeIds = {"ScriptTask_1"};
+        
+        Long processInstanceId = processService.startProcessFromNodeIds(deploymentUnit.getIdentifier(), processId, Collections.emptyMap(), nodeIds);
+                
+        ProcessInstance pi = processService.getProcessInstance(processInstanceId);
+        assertNull(pi);
+        
+        Collection<NodeInstanceDesc> end = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.END, new QueryContext(0, 0));
+        assertThat("Four nodes should have ended", end.size(), is(2));
+        List<String> endNodes = end.stream().map(e -> e.getNodeId()).collect(Collectors.toCollection(ArrayList::new));
+        assertThat(endNodes, hasItems("EndEvent_2", "ScriptTask_1"));
+
+        Collection<NodeInstanceDesc> obsolete = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.OBSOLETE, new QueryContext(0, 0));
+        assertThat("No obsolete nodes", obsolete.size(), is(0));
+        
+        Collection<NodeInstanceDesc> skipped = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.SKIPPED, new QueryContext(0, 0));
+        assertThat("No skipped nodes", skipped.size(), is(0));
+    }
+
+    private KModuleDeploymentUnit deployUnit() {
+        KModuleDeploymentUnit deploymentUnit = new KModuleDeploymentUnit(GROUP_ID, ARTIFACT_ID, VERSION);
+
+        deploymentService.deploy(deploymentUnit);
+        units.add(deploymentUnit);
+        assertNotNull(processService);
+        return deploymentUnit;
+    }
+
+    private String[] startAndAbortProcess(final String processId, KModuleDeploymentUnit deploymentUnit, Map<String, Object> map, int expectedAborted) {
+        Long processInstanceId = processService.startProcess(deploymentUnit.getIdentifier(), processId, map);
+        assertNotNull(processInstanceId);
+
+        processService.abortProcessInstance(processInstanceId);
+
+        Collection<NodeInstanceDesc> aborted = runtimeDataService.getProcessInstanceFullHistoryByType(processInstanceId, EntryType.ABORTED, new QueryContext(0, 0));
+        assertThat(aborted.size(), is(expectedAborted));
+        return aborted.stream().map(e -> e.getNodeId()).toArray(String[]::new);
     }
 
     private void startAndCompleteTask(Long processInstanceId, String taskName) {
