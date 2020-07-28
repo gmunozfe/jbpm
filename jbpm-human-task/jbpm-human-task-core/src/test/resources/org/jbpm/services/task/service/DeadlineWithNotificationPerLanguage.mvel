@@ -1,0 +1,38 @@
+with ( new Task() ) { 
+    taskData = (with ( new TaskData() ) {
+                   documentAccessType = AccessType.Inline,
+                   documentType = "MVEL"
+                }),
+    peopleAssignments = (with ( new PeopleAssignments() ) { businessAdministrators = [ new User('Administrator') ], }),
+    names = [ new I18NText( 'en-UK', 'Simple Test Task')],
+    deadlines = ( with ( new Deadlines() ) {
+        startDeadlines = [ 
+            (with (new Deadline()) {
+                date = new Date( now.time + 4000 ),            
+                escalations = [ 
+                    (with (new Escalation()) {
+                        name = "My Start Escalation",
+                        constraints = [new BooleanExpression( "mvel", "true" )],
+                        notifications = [ 
+                            (with (new EmailNotification()) {
+                                recipients = [ new org.jbpm.services.task.impl.model.EmailImpl('mortadelo@tia.es'), new User('Filemon') ],
+                                emailHeaders = [ new Language("es-ES") : (with (new EmailNotificationHeader()) { 
+                                    language = 'es-ES',
+                                    subject = "espanol",
+                                    body = "@{doc.body}"
+                                })
+                                ,
+                                new Language("fr-FR") : (with (new EmailNotificationHeader()) { 
+                                    language = 'fr-FR',
+                                    subject = "francais",
+                                    body = "@{doc.body}"
+                                })
+                                ]                                                                                                                                                                                  
+                            }) 
+                        ]                                               
+                    }) 
+                ]
+            })
+        ]
+    })        
+};
