@@ -94,6 +94,16 @@ public class ForEachNodeInstance extends CompositeContextNodeInstance {
         return getForEachNode().getCompositeNode();
     }
 
+    @Override
+    public void triggerCompleted() {
+
+        super.triggerCompleted();
+    }
+    @Override
+    public void cancel(CancelType cancelType) {
+        super.cancel(cancelType);
+    }
+
     private Collection<?> evaluateCollectionExpression(String collectionExpression) {
         Object collection;
         VariableScopeInstance variableScopeInstance = (VariableScopeInstance)
