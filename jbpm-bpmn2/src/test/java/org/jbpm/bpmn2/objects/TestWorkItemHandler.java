@@ -34,6 +34,7 @@ public class TestWorkItemHandler implements WorkItemHandler {
 
     public void abortWorkItem(WorkItem workItem, WorkItemManager manager) {
         abortedWorkItems.add(workItem);
+        manager.abortWorkItem(workItem.getId());
     }
 
     public WorkItem getWorkItem() {

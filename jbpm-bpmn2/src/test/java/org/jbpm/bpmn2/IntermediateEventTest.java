@@ -2159,15 +2159,18 @@ public class IntermediateEventTest extends JbpmBpmn2TestCase {
 
         ksession.getWorkItemManager().registerWorkItemHandler("Human Task", handler);
         ProcessInstance processInstance = ksession.startProcess("simple.parallel");
-        processInstance.getId();
+        
         assertProcessInstanceActive(processInstance);
 
         countDownListener.waitTillCompleted(5000L);
-
+        
         List<WorkItem> workItems = handler.getWorkItems();
         assertThat(workItems).isNotNull();
         assertThat(workItems.size()).isEqualTo(3);
-
+        
+        assertThat(handler.getAbortedWorkItems().size()).isEqualTo(3);
+        assertNotNodeTriggered(processInstance.getId(), "hey", "end2");
+        
         assertProcessInstanceFinished(processInstance, ksession);
     }
 
