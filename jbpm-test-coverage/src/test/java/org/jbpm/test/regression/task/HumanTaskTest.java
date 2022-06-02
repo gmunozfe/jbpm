@@ -241,6 +241,16 @@ public class HumanTaskTest extends JbpmTestCase {
             public void afterTaskActivatedEvent(TaskEvent event) {
                 triggered.increment();
             }
+            
+            @Override
+            public void beforeTaskActivatedEvent(TaskEvent event) {
+                assertEquals(Status.Created, event.getTask().getTaskData().getStatus());
+            }
+            
+            @Override
+            public void afterTaskAddedEvent(TaskEvent event) {
+                assertEquals(Status.Created, event.getTask().getTaskData().getStatus());
+            }
 
         };
         RuntimeEngine engine = getRuntimeEngine();
