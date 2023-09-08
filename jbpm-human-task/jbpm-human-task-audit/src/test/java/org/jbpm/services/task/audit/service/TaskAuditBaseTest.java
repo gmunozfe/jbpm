@@ -23,6 +23,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -50,6 +51,8 @@ import org.kie.internal.task.api.TaskVariable.VariableType;
 import org.kie.internal.task.api.model.InternalTaskData;
 import org.kie.internal.task.api.model.TaskEvent;
 import org.kie.internal.task.api.model.TaskEvent.TaskEventType;
+
+import com.github.javaparser.utils.Log;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -313,11 +316,15 @@ public abstract class TaskAuditBaseTest extends HumanTaskServicesBaseTest {
         taskService.setDescriptions(taskId, descriptions);
 
         task = taskService.getTaskById(taskId);
-        Assertions.assertThat(task.getDescription()).isEqualTo(newDescription);
+        //Replacing "null" by "" as Oracle returns "null", not empty
+        String desc = newDescription!=null? Objects.toString(task.getDescription(), "") : task.getDescription();
+        Assertions.assertThat(desc).isEqualTo(newDescription);
 
         List<AuditTask> auditTasks = taskAuditService.getAllAuditTasks(new QueryFilter());
         Assertions.assertThat(auditTasks).hasSize(1);
-        Assertions.assertThat(auditTasks.get(0).getDescription()).isEqualTo(newDescription);
+        //Replacing "null" by "" as Oracle returns "null", not empty
+        desc = newDescription!=null? Objects.toString(auditTasks.get(0).getDescription(), "") : auditTasks.get(0).getDescription();
+        Assertions.assertThat(desc).isEqualTo(newDescription);
 
         List<TaskEvent> taskEvents = taskAuditService.getAllTaskEvents(taskId, new QueryFilter());
         if (changeExpected) {
@@ -449,11 +456,15 @@ public abstract class TaskAuditBaseTest extends HumanTaskServicesBaseTest {
         taskService.setTaskNames(taskId, taskNames);
 
         task = taskService.getTaskById(taskId);
-        Assertions.assertThat(task.getName()).isEqualTo(newName);
+        //Replacing "null" by "" as Oracle returns "null", not empty
+        String name = newName!=null? Objects.toString(task.getName(), "") : task.getName();
+        Assertions.assertThat(name).isEqualTo(newName);
 
         List<AuditTask> auditTasks = taskAuditService.getAllAuditTasks(new QueryFilter());
         Assertions.assertThat(auditTasks).hasSize(1);
-        Assertions.assertThat(auditTasks.get(0).getName()).isEqualTo(newName);
+        //Replacing "null" by "" as Oracle returns "null", not empty
+        name = newName!=null? Objects.toString(auditTasks.get(0).getName(), "") : auditTasks.get(0).getName();
+        Assertions.assertThat(name).isEqualTo(newName);
 
         List<TaskEvent> taskEvents = taskAuditService.getAllTaskEvents(taskId, new QueryFilter());
         if (changeExpected) {

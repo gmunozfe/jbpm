@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
@@ -141,8 +142,7 @@ public class LocalTaskAuditWithDeadlineTest extends HumanTaskServicesBaseTest {
         
         auditTask = tasks.get(0);
         assertEquals(Status.Ready.toString(), auditTask.getStatus());
-        assertEquals("", auditTask.getActualOwner());
-    
+        assertEquals("", Objects.toString(auditTask.getActualOwner(), ""));
     }
 
     @Test(timeout=10000)
@@ -202,7 +202,6 @@ public class LocalTaskAuditWithDeadlineTest extends HumanTaskServicesBaseTest {
 
         auditTask = tasks.get(0);
         assertEquals(Status.Ready.toString(), auditTask.getStatus());
-        assertEquals("", auditTask.getActualOwner());
-
+        assertEquals("", Objects.toString(auditTask.getActualOwner(), ""));
     }
 }

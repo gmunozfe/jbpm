@@ -21,7 +21,9 @@ import javax.persistence.Persistence;
 
 import org.drools.core.impl.EnvironmentFactory;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.kie.api.runtime.Environment;
 import org.kie.api.runtime.EnvironmentName;
 import org.kie.internal.task.api.InternalTaskService;
@@ -31,15 +33,21 @@ import org.kie.test.util.db.PoolingDataSourceWrapper;
 
 public class LifeCycleLocalCommandBasedTest extends LifeCycleBaseTest {
 
-	private PoolingDataSourceWrapper pds;
-	private EntityManagerFactory emf;
+	private static PoolingDataSourceWrapper pds;
+	private static EntityManagerFactory emf;
+	
+    
+	 @BeforeClass
+	 public static void beforeClass() {
+	        pds = setupPoolingDataSource();
+	        emf = Persistence.createEntityManagerFactory("org.jbpm.services.task");
+	}
+
 	
     @Before
     public void setup() {
         this.testIdentityProvider = new TestIdentityProvider();
-        pds = setupPoolingDataSource();
-        emf = Persistence.createEntityManagerFactory("org.jbpm.services.task");
-
+        
         Environment env = EnvironmentFactory.newEnvironment();
         env.set(EnvironmentName.IDENTITY_PROVIDER, this.testIdentityProvider);
 
@@ -49,9 +57,14 @@ public class LifeCycleLocalCommandBasedTest extends LifeCycleBaseTest {
                                                                         .getTaskService();
 
     }
+    
+    @After
+    public void tearDown() {
+        super.tearDown();
+    }
 
-	@After
-	public void clean() {
+	@AfterClass
+	public static void clean() {
 		if (emf != null) {
 			emf.close();
 		}
