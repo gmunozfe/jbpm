@@ -346,8 +346,16 @@ public class QueryServiceImplTest extends AbstractKieServicesBaseTest {
     public void testGetProcessInstancesWithVariables() {
 
         query = new SqlQueryDefinition("getAllProcessInstancesWithVariables", dataSourceJNDIname);
-        query.setExpression("select pil.*, v.variableId, v.value " + "from ProcessInstanceLog pil " + "inner join (select vil.processInstanceId ,vil.variableId, MAX(vil.ID) maxvilid  FROM VariableInstanceLog vil " + "GROUP BY vil.processInstanceId, vil.variableId ORDER BY vil.processInstanceId)  x " + "ON (v.variableId = x.variableId  AND v.id = x.maxvilid )" + "INNER JOIN VariableInstanceLog v " + "ON (v.processInstanceId = pil.processInstanceId)");
+        //query.setExpression("select pil.*, v.variableId, v.value " + "from ProcessInstanceLog pil " + "inner join (select vil.processInstanceId ,vil.variableId, MAX(vil.ID) maxvilid  FROM VariableInstanceLog vil " + "GROUP BY vil.processInstanceId, vil.variableId ORDER BY vil.processInstanceId)  x " + "ON (v.variableId = x.variableId  AND v.id = x.maxvilid )" + " INNER JOIN VariableInstanceLog v " + "ON (v.processInstanceId = pil.processInstanceId)");
 
+        query.setExpression("SELECT pil.*, v.variableId, v.value " + 
+                "FROM ProcessInstanceLog pil " + 
+                "INNER JOIN (" + 
+                "    SELECT vil.processInstanceId, vil.variableId, MAX(vil.ID) AS maxvilid" + 
+                "    FROM VariableInstanceLog vil" + 
+                "    GROUP BY vil.processInstanceId, vil.variableId" + 
+                ") x ON (pil.processInstanceId = x.processInstanceId) " + 
+                "INNER JOIN VariableInstanceLog v ON (v.variableId = x.variableId AND v.id = x.maxvilid)");
         queryService.registerQuery(query);
 
         Map<String, Object> params = new HashMap<String, Object>();
@@ -693,6 +701,7 @@ public class QueryServiceImplTest extends AbstractKieServicesBaseTest {
         setFieldValue(cinstance, "lastName", "doe");
         setFieldValue(cinstance, "age", new Integer(45));
         setFieldValue(cinstance, "customerId", new Long(1234));
+        setFieldValue(cinstance, "id", new Long(1));
 
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("customer", cinstance);

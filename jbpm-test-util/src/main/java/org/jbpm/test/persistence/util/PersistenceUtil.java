@@ -118,6 +118,7 @@ public class PersistenceUtil {
      */
     public static void startH2TcpServer(Properties datasourceProperties) {
         String jdbcUrl = datasourceProperties.getProperty("url");
+        logger.info("@@ jdbcUrl: "+jdbcUrl);
         if (jdbcUrl != null && jdbcUrl.matches("jdbc:h2:tcp:.*")) {
             h2Server.start(datasourceProperties.getProperty("tcpPort"));
         }
